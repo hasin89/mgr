@@ -613,21 +613,25 @@ def findObjects(shape,contours):
     return cntTMP
 
 
-def findMainObject(objectsCNT,cornerList):
+def findMainObject(objectsCNT,cornerList,shape):
 
-    inside = {}
-    for m in range(len(objectsCNT)):
-        inside[m] = 0
+    yc0 = shape[0]/2
+    xc0 = shape[1]/2
+    centrum = {}
+    min_index = -1
+    min_cost = shape[0]*shape[1]
 
+    for n,c in enumerate(objectsCNT):
+        moments = cv2.moments(c)
+        yc = int(moments['m01']/moments['m00'])
+        xc = int(moments['m10']/moments['m00'])
+        centrum[n] = (xc,yc)
+        dx = xc0-xc
+        dy = yc0-yc
+        cost = sqrt(pow(dx,2)+pow(dy,2))
+        if cost.real < min_cost:
+            min_cost = cost.real
+            min_index = n
+    mainCNT = [objectsCNT[min_index]]
 
-    #zaznaczenie znalezionych wierzchołków
-    for point in cornerList:
-        for n,c in enumerate(objectsCNT):
-            isinside = cv2.pointPolygonTest(c,(point[0],point[1]),0)
-            if isinside == 1:
-                inside[int(n)] += 1
-
-     # znalezienie bryły na plótnie
-    mainCnt = [objectsCNT[inside.values().index(max(inside.values()))]]
-
-    return mainCnt
+    return mainCNT,centrum

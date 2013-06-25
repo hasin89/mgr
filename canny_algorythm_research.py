@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from cmath import sqrt
 from numpy.lib.function_base import average
 from func import histogram
 
@@ -56,8 +57,7 @@ def analise(edge):
 
     objectsCNT = features.findObjects(shape,contours)
 
-    mainCNT = features.findMainObject(objectsCNT,cornerList)
-
+    mainCNT,centrum = features.findMainObject(objectsCNT,cornerList,shape)
 
     cornerList = features.eliminateSimilarCorners(cornerList,mainCNT,shape)
 
@@ -69,22 +69,27 @@ def analise(edge):
     x1 = mainCNT[0]+mainCNT[2]
 
     corners = np.asarray(cornerList)
-    leftX = min(corners.T[0])
-    leftIndex = corners.T.tolist()[0].index(leftX)
-    leftY = corners.T[1][leftIndex]
-    left = (leftX,leftY)
+    # na wypadek gdyby nie znalazły się żadne wierzchołki wewnątrz głównego konturu
+    if corners.size > 0:
+        leftX = min(corners.T[0])
+        leftIndex = corners.T.tolist()[0].index(leftX)
+        leftY = corners.T[1][leftIndex]
+        left = (leftX,leftY)
 
-    rightX = max(corners.T[0])
-    rightIndex = corners.T.tolist()[0].index(rightX)
-    rightY = corners.T[1][rightIndex]
-    right = (rightX,rightY)
+        rightX = max(corners.T[0])
+        rightIndex = corners.T.tolist()[0].index(rightX)
+        rightY = corners.T[1][rightIndex]
+        right = (rightX,rightY)
+    else:
+        left = (0,0)
+        right = (shape[1],shape[0])
+
+    return (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,centrum)
 
 
-    print 'd'
-    return cornerList,mainCNT,cornerCNT,contours,longestContour,left,right
+def markFeatures(src,stuff):
 
-
-def markFeatures(src,(cornerList,mainCNT,cornerCNT,contours,longestContour,left,right)):
+    (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,centrum) = stuff
 
     img = src.copy()
 
@@ -100,9 +105,16 @@ def markFeatures(src,(cornerList,mainCNT,cornerCNT,contours,longestContour,left,
     #zaznaczenie interesujących miejsc
     img = mark.object(img,mainCNT)
 
-    img = mark.points(img,left)
-    img = mark.points(img,right)
+    img = mark.point(img,left)
+    img = mark.point(img,right)
 
+    img = mark.points(img,centrum)
+
+#zaznaczanie centrum obrazu na żółto
+    xc0 = img.shape[0]/2
+    yc0 = img.shape[1]/2
+    point = (yc0,xc0)
+    img = mark.YellowPoint(img,point)
 
     return img
 
@@ -185,7 +197,7 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     list = range(7,16)
-    # list = [1]
+    list = [3]
 
     folder = 4
     # print list
@@ -195,7 +207,6 @@ def run():
         print(filename)
         img = cv2.imread(filename)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # gray_histogram(gray)
         h, w = img.shape[:2]
 
         FirstCycleFlag = True
@@ -235,42 +246,22 @@ def run():
                 theta = 0.025
                 threshold = 100
                 #znaldź linie hougha
-                # lines = cv2.HoughLines(nimg,rho,theta,threshold)
+                # lines = cv2.HoughLines(edge_up,rho,theta,threshold)
+                # features.drawLines(lines,img_up)
 
-                (cornerList,mainCNT,cornerCNT,contours_up,longestContour,left_up,right_up) = analise(edge_up)
+                (stuff_up) = analise(edge_up)
 
-                img_up = markFeatures(img_up,(cornerList,mainCNT,cornerCNT,contours_up,longestContour,left_up,right_up))
+                img_up = markFeatures(img_up,stuff_up)
 
                 f = 'img/results/contours/parowanie/folder_%d_%d_cont2_gora_.png' % (folder,i)
                 # cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
 
-                #
-                # indexes = []
-                # for j in range(len(contours)):
-                #     indexes = features.findCorners(contours[j],24)
-                #     img = img_up.copy()
-                #     for id in indexes:
-                #         (y,x) = contours[j][id]
-                #         cv2.circle(img, (x,y),10,(0,255,0,0),5)
-
-
-                        # print indexes
-                        # for j,val in enumerate(contours):
-                        #     for i in indexes[j]:
-                        #         (y,x) = contours[j][i]
-                    #         cv2.circle(img_up, (x,y),10,(0,255,0,0),5)
-
-                #
-                # f = 'img/results/contours/%d_cont2_gora.png' % (i)
-                print f
-
-                # cv2.imwrite(f,edge_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
 
                 # dolny obraz
 
-                (cornerList,mainCNT,cornerCNT,contours_up,longestContour,left_down,right_down) = analise(edge_down)
+                stuff_down = analise(edge_down)
 
-                img_down = markFeatures(img_down,(cornerList,mainCNT,cornerCNT,contours_up,longestContour,left_down,right_down))
+                img_down = markFeatures(img_down,stuff_down)
 
                 f = 'img/results/contours/parowanie/folder_%d_%d_cont2_dol_.png' % (folder,i)
                 # cv2.imwrite(f,img_down)
@@ -278,15 +269,15 @@ def run():
                 im = np.append(img_up,img_down,0)
 
                 height = img_up.shape[0]
-                l_d = [l for l in left_down]
-                r_d = [l for l in right_down]
+                l_d = [l for l in stuff_down[5]]
+                r_d = [l for l in stuff_down[6]]
 
                 left_down = (l_d[0],l_d[1]+height)
                 right_down = (r_d[0],r_d[1]+height)
 
 
-                cv2.line(im,left_up,left_down,(255,255,0),2)
-                cv2.line(im,right_up,right_down,(255,255,0),2)
+                cv2.line(im,stuff_up[5],left_down,(255,255,0),2)
+                cv2.line(im,stuff_up[6],right_down,(255,255,0),2)
 
                 f = 'img/results/contours/parowanie/folder_%d_%d_cont2_all_.png' % (folder,i)
                 cv2.imwrite(f,im)

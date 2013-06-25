@@ -42,8 +42,21 @@ def corners(img,corners):
     return img
 
 
-def points(img,point):
+def point(img,point):
     cv2.circle(img, point ,5,(255,255,0,0),2)
+
+    return img
+
+
+def YellowPoint(img,point):
+    cv2.circle(img, point ,10,(0,255,244,0),5)
+
+    return img
+
+
+def points(img,points):
+    for point in points.itervalues():
+        cv2.circle(img, point ,4,(255,255,255,0),3)
 
     return img
 
