@@ -16,8 +16,6 @@ Usage:
 
 import cv2
 import browse
-import video
-import sys
 import numpy as np
 import func.gamma as gamma
 
