@@ -613,11 +613,10 @@ def findObjects(shape,contours):
     return cntTMP
 
 
-def findMainObject(objectsCNT,cornerList,shape):
+def findMainObject(objectsCNT,shape):
 
     yc0 = shape[0]/2
     xc0 = shape[1]/2
-    centrum = {}
     min_index = -1
     min_cost = shape[0]*shape[1]
 
@@ -625,7 +624,6 @@ def findMainObject(objectsCNT,cornerList,shape):
         moments = cv2.moments(c)
         yc = int(moments['m01']/moments['m00'])
         xc = int(moments['m10']/moments['m00'])
-        centrum[n] = (xc,yc)
         dx = xc0-xc
         dy = yc0-yc
         cost = sqrt(pow(dx,2)+pow(dy,2))
@@ -634,4 +632,4 @@ def findMainObject(objectsCNT,cornerList,shape):
             min_index = n
     mainCNT = [objectsCNT[min_index]]
 
-    return mainCNT,centrum
+    return mainCNT
