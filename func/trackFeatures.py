@@ -619,6 +619,7 @@ def findMainObject(objectsCNT,cornerList):
     for m in range(len(objectsCNT)):
         inside[m] = 0
 
+
     #zaznaczenie znalezionych wierzchołków
     for point in cornerList:
         for n,c in enumerate(objectsCNT):
