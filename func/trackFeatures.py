@@ -98,6 +98,9 @@ def gammaSum(img,gaussKernel=11):
 
 
 def findContours(edge):
+    '''
+    łaczy punkty w kontur
+    '''
 
     contours = {0:[]}
     i = 0
@@ -272,6 +275,10 @@ def searchNearBy(edge,x,y):
 
 
 def getLine((y1,x1),(y2,x2)):
+    '''
+    zwraca parametry prostej Ax+By+C na podstawie podanych dwóch punktów
+    return (a,b,c)
+    '''
     line = []
 
     dx = x2-x1
@@ -377,6 +384,9 @@ def calcDistances(segment,size):
 
 
 def calcDistFromLine(point,line):
+    '''
+    liczy odleglosc punktu (x,y) od prostej (a,b,c)
+    '''
     x = point[1]
     y = point[0]
 
@@ -411,7 +421,7 @@ def drawLines(lines,img):
     # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
     m,n,w = img.shape
 
-    for (rho, theta) in lines[:20]:
+    for (rho, theta) in lines[:10]:
         # blue for infinite lines (only draw the 5 strongest)
         x0 = np.cos(theta)*rho
         y0 = np.sin(theta)*rho
@@ -419,6 +429,31 @@ def drawLines(lines,img):
         pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
         cv2.line(img, pt1, pt2, (255,0,0), 2)
     return img
+
+def convertToGeneral((rho,theta)):
+    '''
+    konwertuje prosta we wspórzednych biegunowych (rho,theta)
+    do postaci ogólnej Ax+By+c = 0
+
+    rho - odległość prostej od (0,0)
+    theta - kąt prostej
+
+    return (a,b,c)
+    '''
+
+    x0 = np.cos(theta)*rho
+    y0 = np.sin(theta)*rho
+
+    if np.cos(theta)!=0:
+        x1= rho/np.cos(theta)
+        y1=0
+    else:
+        x1=100
+        y1=y0
+
+    line= getLine((y0,x0),(y1,x1))
+
+    return line
 
 
 def eliminateSimilarCorners_old(corners,nimg,border=35):
@@ -464,6 +499,9 @@ def eliminateSimilarCorners_old(corners,nimg,border=35):
 
 
 def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
+    '''
+    eliminuje wierzchołki ktore prawdopodobnie sa blisko siebie
+    '''
 
     # płótno pod wierzchołki
     nimg = np.zeros(shape,dtype='uint8')
@@ -471,6 +509,8 @@ def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
 
     cornersInside = []
     distances = {}
+
+    #wybranie tylko tych wierzchołkow ktore leza wewnatrz obwiedni
     for pt in corners:
 
         #sprawdź czy leży w konturze i w jakiej odległości
@@ -503,8 +543,13 @@ def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
         #znajdź punkty na obszarze
         non = np.nonzero(img3)
 
+
         #jezeli jest więcej niż jeden
         if len(non[0])>1:
+
+            semi[(x,y)] = []
+            semi[(x,y)].append((x,y))
+
             for k in range(len(non[0])):
 
                 #znajdź wektor między punktem a środkiem obszaru
@@ -512,21 +557,19 @@ def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
                 vecX = non[1][k]-border
 
                 #jezeli jest to wektor niezerowy to mamy punkt
-                if (vecX != 0) & (vecY != 0):
+                if (vecX != 0) | (vecY != 0):
                     new = (x+vecX, y+vecY)
-                    semi[(x,y)] = []
-                    semi[(x,y)].append((x,y))
                     semi[(x,y)].append(new)
                     try:
                         del cornersInside[cornersInside.index((x,y))]
                     except ValueError:
-                        print 'error'
+                        print 'error a'
                         print (x,y)
                         pass
                     try:
                         del cornersInside[cornersInside.index(new)]
                     except ValueError:
-                        print 'error'
+                        print 'error new'
                         print (x,y)
                         pass
 
@@ -579,10 +622,15 @@ def findCorners(shape,contours):
 
 
 def findObjects(shape,contours):
+    '''
+     znajduje obiekty na podstawie konturów zmalezionych (łaczy poblisike kontury w jeden obiekt
+    '''
 
     rectangles = []
     tmpbinary = np.zeros(shape,dtype='uint8')
     tmpbinary[:][:] = 0
+
+    #zrób obramowania do każdego konturu
     for c in contours.itervalues():
         if len(c)>0:
             points = np.asarray([c])
@@ -608,25 +656,35 @@ def findObjects(shape,contours):
         cv2.rectangle(tmpbinary,A,B,255,-1)
         # cv2.drawContours(tmpbinary,r,-1,255,-1)
 
+    #znajdź kontury wśród białych prostokątów na czarnym tle
     cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
     return cntTMP
 
 
 def findMainObject(objectsCNT,shape):
+    '''
+     znajduje obiekt najbardziej po srodku plaszczyzny (bo to nie beda krawedzie lustra)
+    '''
 
+    #srodek obrazu
     yc0 = shape[0]/2
     xc0 = shape[1]/2
+
     min_index = -1
     min_cost = shape[0]*shape[1]
 
     for n,c in enumerate(objectsCNT):
         moments = cv2.moments(c)
+        # policzenie srodkow ciezkosci figur
         yc = int(moments['m01']/moments['m00'])
         xc = int(moments['m10']/moments['m00'])
+
+        #odległosc od srodka
         dx = xc0-xc
         dy = yc0-yc
         cost = sqrt(pow(dx,2)+pow(dy,2))
+
         if cost.real < min_cost:
             min_cost = cost.real
             min_index = n
