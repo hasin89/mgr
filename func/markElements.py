@@ -24,7 +24,7 @@ def contours(img,contours):
     for c in contours.itervalues():
         if len(c)>0:
             points = np.asarray([c])
-            img[points[0][:,0],points[0][:,1]] = (0,255,0)
+            img[points[0][:,0],points[0][:,1]] = (255,255,255)
     return img
 
 
@@ -36,6 +36,9 @@ def singleContour(img,cnt):
 
 
 def corners(img,corners):
+    '''
+    wierzcholki na niebiesko
+    '''
     for corn in corners:
         cv2.circle(img, (corn[0],corn[1]),5,(255,0,0,0),2)
 
@@ -43,6 +46,9 @@ def corners(img,corners):
 
 
 def point(img,point):
+    '''
+    skrajne wierzchołki na blekitno
+    '''
     cv2.circle(img, point ,5,(255,255,0,0),2)
 
     return img
@@ -55,6 +61,9 @@ def YellowPoint(img,point):
 
 
 def points(img,points):
+    '''
+    na biało
+    '''
     for point in points.itervalues():
         cv2.circle(img, point ,4,(255,255,255,0),3)
 
