@@ -73,16 +73,16 @@ def analise(edge,img=0):
 
     # to chyba???? jest usuwanie konturow nie zwiazanych z obiektem glownym
     toDel = []
-    # for key,c in contours.iteritems():
-    #     if len(c)>0:
-    #         isinside = cv2.pointPolygonTest(mainBND[0],c[0],0)
-    #     else:
-    #         isinside = 0
-    #     if isinside != 1:
-    #         contours[key] = []
-    #         pass
-    #     else:
-    #         print key
+    for key,c in contours.iteritems():
+        if len(c)>0:
+            isinside = cv2.pointPolygonTest(mainBND[0],(c[0][1],c[0][0]),0)
+        else:
+            isinside = 0
+        if isinside != 1:
+            contours[key] = []
+            pass
+        else:
+            print key
 
     corners,longestContour, cornerObj = features.findCorners(shape,contours)
 
@@ -251,7 +251,7 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     # list = range(1,16)
-    list = [5]
+    list = [2]
 
     folder = 4
     # print list
