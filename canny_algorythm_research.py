@@ -71,7 +71,7 @@ def analise(edge,img=0):
     # cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
     # browse.browse(img)
 
-    # to chyba???? jest usuwanie konturow nie zwiazanych z obiektem glownym
+    # to jest usuwanie konturow nie zwiazanych z obiektem glownym
     toDel = []
     for key,c in contours.iteritems():
         if len(c)>0:
@@ -84,6 +84,7 @@ def analise(edge,img=0):
         else:
             print key
 
+    #wykrycie wierzchołków
     corners,longestContour, cornerObj = features.findCorners(shape,contours)
 
     #lista wierzchołkow zwiazanych z bryła i zredukowanych
@@ -120,7 +121,9 @@ def analise(edge,img=0):
     theta = 0.025
     threshold = 125
     #znaldź linie hougha
-    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)
+    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)[0]
+
+    crossing = features.getCrossings(lines,edge)
 
 
     # cornerList - wierzchołki obiektu
@@ -131,14 +134,15 @@ def analise(edge,img=0):
     # left - wierzchołek najbardziej z lewej w ramie
     # right - wierzchołek najbardziej z prawej w ramie
     # lines - proste zwrócone przez algorytm hougha
+    # crossing - punkty przeciecia prostych
 
 
-    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines[0])
+    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing)
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines) = stuff
+    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing) = stuff
 
     img = src.copy()
     img[:][:] = (0,0,0)
@@ -166,6 +170,9 @@ def markFeatures(src,stuff):
     yc0 = img.shape[1]/2
     point = (yc0,xc0)
     img = mark.YellowPoint(img,point)
+
+    for p in crossing:
+        img = mark.YellowPoint(img,(p[1],p[0]))
 
     # zazmacz lini hougha
     features.drawLines(lines,img)
@@ -251,7 +258,7 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     # list = range(1,16)
-    list = [2]
+    list = [5]
 
     folder = 4
     # print list
@@ -303,6 +310,38 @@ def run():
 
 
                 img_up = markFeatures(img_up,stuff_up)
+
+
+                #
+                # linesGeneral = []
+                #
+                # for (rho, theta) in stuff_up[7]:
+                #     # blue for infinite lines (only draw the 5 strongest)
+                #     a,b,c = features.convertToGeneral((rho,theta),img_up)
+                #     linesGeneral.append((a,b,c))
+                #
+                #     #test czy te proste generalne sie zgadzaja
+                #
+                #     #dolna ekranu
+                #     y1 = img_up.shape[0]
+                #     x1 = int((b*y1+c)/(-a))
+                #
+                #     #górna krawedź
+                #     x2 = int(-c/a)
+                #     y2 = 0
+                #
+                #     # pt1 = (x1,y1)
+                #     # pt2 = (x2,y2)
+                #     # cv2.circle(img_up, pt1 ,7,(2,255,255,0),3)
+                #     # cv2.circle(img_up, pt2 ,7,(2,255,255,0),3)
+                #     # cv2.line(img_up, pt1, pt2, (120,255,0), 4)
+                #
+                #
+                #
+                #
+                #
+                # print 'd'
+
 
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
                 cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )

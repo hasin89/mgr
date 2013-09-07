@@ -294,6 +294,49 @@ def getLine((y1,x1),(y2,x2)):
 
     return (a,b,c)
 
+def getCrossings(lines,edge):
+    '''
+    zwraca punkty bedące przecięciami podanych prostych
+
+    lines - lista prostych będących krotkami [ (a,b,c) , ... ]
+    edge - płótno
+
+    return [ (x,y) ] - lista puntków będacych przecieciami
+    '''
+    linesGeneral = []
+
+    for (rho, theta) in lines:
+        # blue for infinite lines (only draw the 5 strongest)
+        a,b,c = convertLineToGeneralForm((rho,theta),edge)
+        linesGeneral.append((a,b,c))
+
+    pairs = [(linesGeneral[i],linesGeneral[i+1]) for i in range(0,len(linesGeneral)-1)]
+    pairs.append((linesGeneral[-1],linesGeneral[0]))
+
+    crossing = []
+    for k,l in pairs:
+        p = get2LinesCrossing(k,l)
+        if p != False:
+            crossing.append(p)
+
+    return crossing
+
+def get2LinesCrossing((a1,b1,c1),(a2,b2,c2)):
+    '''
+    zwraca wspołrzedne przecięcia siędwóch prostych podanych parametrami postaci obólnej
+    (a1,b1,c1) i(a2,b2,c2)
+
+    return p = (x,y)
+    '''
+    Wab = a1*b2 - a2*b1
+    Wbc = b1 * c2 - b2 * c1
+    Wca = c1 * a2 - c2 * a1
+
+    if Wab != 0:
+        p = (int(Wca/Wab),int(Wbc/Wab))
+        return p
+    else:
+        return False
 
 def generateMask(maskSize):
 
@@ -421,16 +464,16 @@ def drawLines(lines,img):
     # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
     m,n,w = img.shape
 
-    for (rho, theta) in lines[:10]:
+    for (rho, theta) in lines[:20]:
         # blue for infinite lines (only draw the 5 strongest)
         x0 = np.cos(theta)*rho
         y0 = np.sin(theta)*rho
         pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
         pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-        cv2.line(img, pt1, pt2, (255,0,0), 2)
+        cv2.line(img, pt1, pt2, (128,0,128), 2)
     return img
 
-def convertToGeneral((rho,theta)):
+def convertLineToGeneralForm((rho,theta),edge):
     '''
     konwertuje prosta we wspórzednych biegunowych (rho,theta)
     do postaci ogólnej Ax+By+c = 0
@@ -444,14 +487,16 @@ def convertToGeneral((rho,theta)):
     x0 = np.cos(theta)*rho
     y0 = np.sin(theta)*rho
 
-    if np.cos(theta)!=0:
-        x1= rho/np.cos(theta)
-        y1=0
-    else:
-        x1=100
-        y1=y0
+    m,n = edge.shape
+    pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
+    pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
 
-    line= getLine((y0,x0),(y1,x1))
+
+    # cv2.circle(img, pt1 ,7,(2,255,255,0),3)
+    # cv2.circle(img, pt2 ,7,(2,255,255,0),3)
+    # cv2.line(img, pt1, pt2, (120,255,0), 4)
+
+    line= getLine((pt1[1],pt1[0]),(pt2[1],pt2[0]))
 
     return line
 
