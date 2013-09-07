@@ -44,7 +44,7 @@ def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
     return edge_filtred
 
 
-def analise(edge):
+def analise(edge,img=0):
     '''
         znajduje kontury, rogi konturu,
     return (cornerList,mainCNT,cornerCNT,contours_up,longestContour)
@@ -54,41 +54,43 @@ def analise(edge):
 
     contours = features.findContours(edge)
 
-    cornerCNT, longestContour, cornerList = features.findCorners(shape,contours)
-
-    # objectsCNT zawiera obiekty znalezione na podstawie konturu
-    objectsCNT = features.findObjects(shape,contours)
+    # objects zawiera obiekty znalezione na podstawie konturu
+    objects = features.findObjects(shape,contours)
 
     # mainCNT zawiera  wielokatna obwiednie bryły
-    mainCNT = features.findMainObject(objectsCNT,shape)
+    mainBND = features.findMainObject(objects,shape)
+
+    #prostokatna obwiednia bryły
+    #przepisanie z listy na tablice numpy
+    mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainBND[0][:,0]]]  )
+    x,y,w,h = cv2.boundingRect(mainCNT2)
+    mainSqrBnd = (x,y,w,h)
+    cont = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
+    rectangle = np.asarray([cont])
+
+    # cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+    # browse.browse(img)
 
     # to chyba???? jest usuwanie konturow nie zwiazanych z obiektem glownym
     toDel = []
-    for key,c in contours.iteritems():
-        if len(c)>0:
-            isinside = cv2.pointPolygonTest(mainCNT[0],c[0],0)
-        else:
-            isinside = 0
-        if isinside != 1:
-            contours[key] = []
-            pass
-        else:
-            print key
-            pass
+    # for key,c in contours.iteritems():
+    #     if len(c)>0:
+    #         isinside = cv2.pointPolygonTest(mainBND[0],c[0],0)
+    #     else:
+    #         isinside = 0
+    #     if isinside != 1:
+    #         contours[key] = []
+    #         pass
+    #     else:
+    #         print key
+
+    corners,longestContour, cornerObj = features.findCorners(shape,contours)
 
     #lista wierzchołkow zwiazanych z bryła i zredukowanych
-    cornerList = features.eliminateSimilarCorners(cornerList,mainCNT,shape)
+    cornerObj = features.eliminateSimilarCorners(cornerObj,mainBND,shape)
 
-    #przepisanie na inna postać?
-    mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainCNT[0][:,0]]]  )
-
-    #prostokatna obwiednia bryły
-    mainCNT = cv2.boundingRect(mainCNT2)
-
-    x0 = mainCNT[0]
-    x1 = mainCNT[0]+mainCNT[2]
-
-    corners = np.asarray(cornerList)
+    # wytypowanie wierzchołków najbardziej lewego i prawego
+    corners = np.asarray(cornerObj)
     # na wypadek gdyby nie znalazły się żadne wierzchołki wewnątrz głównego konturu
     if corners.size > 0:
         #znajdz wierzchołek o naniejszej wspolrzednej X
@@ -121,12 +123,22 @@ def analise(edge):
     lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)
 
 
-    return (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,lines[0])
+    # cornerList - wierzchołki obiektu
+    # cornerCNT - wierzchołki na konturach
+    # contours - słownik konturów
+    # longestContour - najdłuzszy kontur
+    # sqrBND - prostokąt obejmujący obiekt w formacie (x,y,width,height) czyli RAMA
+    # left - wierzchołek najbardziej z lewej w ramie
+    # right - wierzchołek najbardziej z prawej w ramie
+    # lines - proste zwrócone przez algorytm hougha
+
+
+    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines[0])
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,lines) = stuff
+    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines) = stuff
 
     img = src.copy()
     img[:][:] = (0,0,0)
@@ -141,7 +153,7 @@ def markFeatures(src,stuff):
     img = mark.corners(img,cornerList)
 
     #zaznaczenie interesujących miejsc (obiektu glownego na niebiesko
-    img = mark.object(img,mainCNT)
+    img = mark.object(img,mainBND)
 
     img = mark.point(img,left)
     img = mark.point(img,right)
@@ -298,7 +310,7 @@ def run():
 
                 # dolny obraz
 
-                stuff_down = analise(edge_down)
+                stuff_down = analise(edge_down,img_down)
 
                 img_down = markFeatures(img_down,stuff_down)
 
