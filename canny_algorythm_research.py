@@ -46,6 +46,7 @@ def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
 
 def analise(edge):
     '''
+        znajduje kontury, rogi konturu,
     return (cornerList,mainCNT,cornerCNT,contours_up,longestContour)
     '''
 
@@ -55,14 +56,33 @@ def analise(edge):
 
     cornerCNT, longestContour, cornerList = features.findCorners(shape,contours)
 
+    # objectsCNT zawiera obiekty znalezione na podstawie konturu
     objectsCNT = features.findObjects(shape,contours)
 
-    mainCNT,centrum = features.findMainObject(objectsCNT,cornerList,shape)
+    # mainCNT zawiera  wielokatna obwiednie bryły
+    mainCNT = features.findMainObject(objectsCNT,shape)
 
+    # to chyba???? jest usuwanie konturow nie zwiazanych z obiektem glownym
+    toDel = []
+    for key,c in contours.iteritems():
+        if len(c)>0:
+            isinside = cv2.pointPolygonTest(mainCNT[0],c[0],0)
+        else:
+            isinside = 0
+        if isinside != 1:
+            contours[key] = []
+            pass
+        else:
+            print key
+            pass
+
+    #lista wierzchołkow zwiazanych z bryła i zredukowanych
     cornerList = features.eliminateSimilarCorners(cornerList,mainCNT,shape)
 
+    #przepisanie na inna postać?
     mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainCNT[0][:,0]]]  )
 
+    #prostokatna obwiednia bryły
     mainCNT = cv2.boundingRect(mainCNT2)
 
     x0 = mainCNT[0]
@@ -71,11 +91,13 @@ def analise(edge):
     corners = np.asarray(cornerList)
     # na wypadek gdyby nie znalazły się żadne wierzchołki wewnątrz głównego konturu
     if corners.size > 0:
+        #znajdz wierzchołek o naniejszej wspolrzednej X
         leftX = min(corners.T[0])
         leftIndex = corners.T.tolist()[0].index(leftX)
         leftY = corners.T[1][leftIndex]
         left = (leftX,leftY)
 
+        #znajdz wierzcholek o najwiekszej wspolrzednj X
         rightX = max(corners.T[0])
         rightIndex = corners.T.tolist()[0].index(rightX)
         rightY = corners.T[1][rightIndex]
@@ -84,37 +106,57 @@ def analise(edge):
         left = (0,0)
         right = (shape[1],shape[0])
 
-    return (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,centrum)
+    tmpbinary = np.zeros(shape,dtype='uint8')
+    tmpbinary[:][:] = 0
+
+    for c in longestContour:
+        tmpbinary[c] = 1
+
+
+    rho = 1
+    # theta = 0.025
+    theta = 0.025
+    threshold = 125
+    #znaldź linie hougha
+    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)
+
+
+    return (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,lines[0])
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,centrum) = stuff
+    (cornerList,mainCNT,cornerCNT,contours,longestContour,left,right,lines) = stuff
 
     img = src.copy()
+    img[:][:] = (0,0,0)
 
-    # zaznaczenie krawędzi
+    # zaznaczenie krawędzi na biało
     img = mark.contours(img,contours)
 
-    #zaznaczenie najdluższego znalezionego konturu
+    #zaznaczenie najdluższego znalezionego konturu na zielono
     img = mark.singleContour(img,longestContour)
 
-    #zaznaczenie wierzchołków
+    #zaznaczenie wierzchołków na niebiesko
     img = mark.corners(img,cornerList)
 
-    #zaznaczenie interesujących miejsc
+    #zaznaczenie interesujących miejsc (obiektu glownego na niebiesko
     img = mark.object(img,mainCNT)
 
     img = mark.point(img,left)
     img = mark.point(img,right)
 
-    img = mark.points(img,centrum)
+    #to zaznaczało srodki ciezkosci na biaol
+    #img = mark.points(img,centrum)
 
 #zaznaczanie centrum obrazu na żółto
     xc0 = img.shape[0]/2
     yc0 = img.shape[1]/2
     point = (yc0,xc0)
     img = mark.YellowPoint(img,point)
+
+    # zazmacz lini hougha
+    features.drawLines(lines,img)
 
     return img
 
@@ -196,8 +238,8 @@ def run():
     # list = range(1, 7)
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
-    list = range(7,16)
-    list = [3]
+    # list = range(1,16)
+    list = [5]
 
     folder = 4
     # print list
@@ -222,7 +264,7 @@ def run():
 
                 edge = track(img, i,gaussKernel,gammaFactor)
 
-                f = 'img/results/contours/%d_gauss_%d_gamma_%f.jpg' % (i,gaussKernel,gammaFactor)
+                f = 'img/results/edges/%d/folder_%d_%d_edge_.jpg' % (folder,folder, i)
                 # cv2.imwrite(f,edge)
 
                 hy,a,b,mirror_line = countNonZeroRowsY(edge)
@@ -242,19 +284,16 @@ def run():
                 edge_down = edge[mirror_line[1]:,:]
                 img_down = img[mirror_line[1]:,:]
 
-                rho = 1
-                theta = 0.025
-                threshold = 100
-                #znaldź linie hougha
-                # lines = cv2.HoughLines(edge_up,rho,theta,threshold)
-                # features.drawLines(lines,img_up)
 
-                (stuff_up) = analise(edge_up)
+
+                stuff_up = analise(edge_up)
+
+
 
                 img_up = markFeatures(img_up,stuff_up)
 
-                f = 'img/results/contours/parowanie/folder_%d_%d_cont2_gora_.png' % (folder,i)
-                # cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+                f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
+                cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
 
 
                 # dolny obraz
@@ -263,8 +302,8 @@ def run():
 
                 img_down = markFeatures(img_down,stuff_down)
 
-                f = 'img/results/contours/parowanie/folder_%d_%d_cont2_dol_.png' % (folder,i)
-                # cv2.imwrite(f,img_down)
+                f = 'img/results/matching/%d/folder_%d_%d_cont2_dol_.png' % (folder,folder,i)
+                cv2.imwrite(f,img_down)
 
                 im = np.append(img_up,img_down,0)
 
@@ -279,8 +318,8 @@ def run():
                 cv2.line(im,stuff_up[5],left_down,(255,255,0),2)
                 cv2.line(im,stuff_up[6],right_down,(255,255,0),2)
 
-                f = 'img/results/contours/parowanie/folder_%d_%d_cont2_all_.png' % (folder,i)
-                cv2.imwrite(f,im)
+                # f = 'img/results/contours/parowanie/folder_%d_%d_cont2_all_.png' % (folder,i)
+                # cv2.imwrite(f,im)
 
 
                 # h = cv2.pyrDown(h)
