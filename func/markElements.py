@@ -79,3 +79,17 @@ def object(img,mainCNT):
     # cv2.drawContours(img,mainCNT,-1,(255,0,0),2)
 
     return img
+
+def drawHoughLines(lines,img):
+
+    # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
+    m,n,w = img.shape
+
+    for (rho, theta) in lines[:20]:
+        # blue for infinite lines (only draw the 5 strongest)
+        x0 = np.cos(theta)*rho
+        y0 = np.sin(theta)*rho
+        pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
+        pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
+        cv2.line(img, pt1, pt2, (128,0,128), 2)
+    return img

@@ -18,6 +18,7 @@ import cv2
 import browse
 import numpy as np
 import func.gamma as gamma
+import func.analise as an
 
 def canny(img, gauss_kernel=11, gammaFactor=0.45):
     """
@@ -274,70 +275,6 @@ def searchNearBy(edge,x,y):
     return np.asarray([]),False
 
 
-def getLine((y1,x1),(y2,x2)):
-    '''
-    zwraca parametry prostej Ax+By+C na podstawie podanych dwóch punktów
-    return (a,b,c)
-    '''
-    line = []
-
-    dx = x2-x1
-    dy = y2-y1
-    if dx != 0:
-        a = dy*1.0/dx
-        c = y1 - a * x1
-        b = -1
-    else:
-        a = -1
-        b = 0
-        c = x1
-
-    return (a,b,c)
-
-def getCrossings(lines,edge):
-    '''
-    zwraca punkty bedące przecięciami podanych prostych
-
-    lines - lista prostych będących krotkami [ (a,b,c) , ... ]
-    edge - płótno
-
-    return [ (x,y) ] - lista puntków będacych przecieciami
-    '''
-    linesGeneral = []
-
-    for (rho, theta) in lines:
-        # blue for infinite lines (only draw the 5 strongest)
-        a,b,c = convertLineToGeneralForm((rho,theta),edge)
-        linesGeneral.append((a,b,c))
-
-    pairs = [(linesGeneral[i],linesGeneral[i+1]) for i in range(0,len(linesGeneral)-1)]
-    pairs.append((linesGeneral[-1],linesGeneral[0]))
-
-    crossing = []
-    for k,l in pairs:
-        p = get2LinesCrossing(k,l)
-        if p != False:
-            crossing.append(p)
-
-    return crossing
-
-def get2LinesCrossing((a1,b1,c1),(a2,b2,c2)):
-    '''
-    zwraca wspołrzedne przecięcia siędwóch prostych podanych parametrami postaci obólnej
-    (a1,b1,c1) i(a2,b2,c2)
-
-    return p = (x,y)
-    '''
-    Wab = a1*b2 - a2*b1
-    Wbc = b1 * c2 - b2 * c1
-    Wca = c1 * a2 - c2 * a1
-
-    if Wab != 0:
-        p = (int(Wca/Wab),int(Wbc/Wab))
-        return p
-    else:
-        return False
-
 def generateMask(maskSize):
 
     n = (maskSize-1)/2
@@ -360,94 +297,11 @@ def generateMask(maskSize):
     return mask
 
 
-def calcDistances(segment,size):
-    '''
-        liczy odległość punktów odcinka od odcinka z
-    '''
-
-    # lista punktów leżących w okolicach wierzchołków
-    ds = {}
-
-    # j nie ma fizycznego znaczenia, iteruje docinek po mniejszych składowych
-    j=0
-    ds[j] = []
-
-    # iteracja po wszystkich elementach odcinka
-    for i in range(len(segment)):
-
-            # oblicz współrzędne prostej
-
-            # jeśli index mieści się w zakresie indexów odcinka
-            if i+size < len(segment):
-                (a,b,c) = getLine(segment[i],segment[i+size])
-
-            # jeżeli index jest większy od największego indexu to doklej element z poczatku
-            else:
-                index = abs(len(segment)-i-size)
-                (a,b,c) = getLine(segment[i],segment[index])
-
-            # oblicz odległość punktu środkowego od prostej
-
-            # jeśli index mieści się w zakresie indexów
-            if i+size/2 < len(segment):
-                dist = calcDistFromLine(segment[i+size/2],(a,b,c))
-
-            # jeżeli index jest większy od największego indexu to weź element z poczatku
-            else:
-                index = abs(len(segment)-i-size/2)
-                dist = calcDistFromLine(segment[index],(a,b,c))
-
-
-            # jesli dystans jest większy niż 2
-
-            if dist>2:
-
-                #zapisz index punktu oraz jego odległość
-
-                # jeśli index mieści się w zakresie indexów
-                if i+size/2 <len(segment):
-                    z = (i+size/2,dist)
-
-                # jeżeli index jest większy od największego indexu to doklej elementy z poczatku
-                else:
-                    index = abs(len(segment)-i-size/2)
-                    z = (index,dist)
-
-                #zapisz punkt posiadający odległość do listy punktów wierzchołkowych
-                ds[j].append(z)
-
-            # jeśli dystanc punktu od prostej jest mały  to zwiększ licznik i usuń poprzedni element
-            else:
-                j+=1
-                if len(ds[j-1]) == 0:
-                    del ds[j-1]
-                ds[j] = []
-    del ds[j]
-    return ds
-
-
-def calcDistFromLine(point,line):
-    '''
-    liczy odleglosc punktu (x,y) od prostej (a,b,c)
-    '''
-    x = point[1]
-    y = point[0]
-
-    a = line[0]
-    b = line[1]
-    c = line[2]
-
-    dist = abs(a*x+b*y+c)
-    dist = dist/(1.0*sqrt(pow(a,2)+pow(b,2)))
-
-    return dist
-
-
 def findCornersOnContour(contour,size):
 
     if len(contour)>size:
         indexes = []
-        dist = calcDistances(contour,size)
+        dist = an.calcDistances(contour,size)
 
         for d in dist.iterkeys():
             segment1 = dist[d]
@@ -459,46 +313,25 @@ def findCornersOnContour(contour,size):
         return []
 
 
-def drawLines(lines,img):
-
-    # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
-    m,n,w = img.shape
-
-    for (rho, theta) in lines[:20]:
-        # blue for infinite lines (only draw the 5 strongest)
-        x0 = np.cos(theta)*rho
-        y0 = np.sin(theta)*rho
-        pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
-        pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-        cv2.line(img, pt1, pt2, (128,0,128), 2)
-    return img
-
-def convertLineToGeneralForm((rho,theta),edge):
+def filterContours(contours,boundaries):
     '''
-    konwertuje prosta we wspórzednych biegunowych (rho,theta)
-    do postaci ogólnej Ax+By+c = 0
+    pozbywa sie konturów z poza podanego obszaru
 
-    rho - odległość prostej od (0,0)
-    theta - kąt prostej
+    contours - kontury - {0:[(a,b),(c,d)],1:[(e,f),(g,h),(j,k)]}
+    boundaries - obszar graniczy - [[[1698  345]] \n\n [[1698  972]]]
 
-    return (a,b,c)
     '''
-
-    x0 = np.cos(theta)*rho
-    y0 = np.sin(theta)*rho
-
-    m,n = edge.shape
-    pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
-    pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-
-
-    # cv2.circle(img, pt1 ,7,(2,255,255,0),3)
-    # cv2.circle(img, pt2 ,7,(2,255,255,0),3)
-    # cv2.line(img, pt1, pt2, (120,255,0), 4)
-
-    line= getLine((pt1[1],pt1[0]),(pt2[1],pt2[0]))
-
-    return line
+    toDel = []
+    for key,c in contours.iteritems():
+        if len(c)>0:
+            isinside = cv2.pointPolygonTest(boundaries,(c[0][1],c[0][0]),0)
+        else:
+            isinside = 0
+        if isinside != 1:
+            contours[key] = []
+        else:
+            pass
+    return contours
 
 
 def eliminateSimilarCorners_old(corners,nimg,border=35):
@@ -736,3 +569,29 @@ def findMainObject(objectsCNT,shape):
     mainCNT = [objectsCNT[min_index]]
 
     return mainCNT
+
+
+def findLines(longestContour,shape):
+    '''
+    zwraca linie Hougha na podstawie podanego konturu
+
+    longestContour - podany kontur
+    shape - kształt płótna
+
+    return lines - linie
+    '''
+
+    tmpbinary = np.zeros(shape,dtype='uint8')
+    tmpbinary[:][:] = 0
+
+    for c in longestContour:
+        tmpbinary[c] = 1
+
+    rho = 1
+    # theta = 0.025
+    theta = 0.025
+    threshold = 125
+    #znaldź linie hougha
+    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)[0]
+
+    return lines

@@ -21,6 +21,8 @@ import func.browse as browse
 import numpy as np
 import func.trackFeatures as features
 import func.markElements as mark
+import func.objects as obj
+import func.analise as an
 import func.histogram
 
 
@@ -68,63 +70,24 @@ def analise(edge,img=0):
     cont = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
     rectangle = np.asarray([cont])
 
-    # cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
-    # browse.browse(img)
-
     # to jest usuwanie konturow nie zwiazanych z obiektem glownym
-    toDel = []
-    for key,c in contours.iteritems():
-        if len(c)>0:
-            isinside = cv2.pointPolygonTest(mainBND[0],(c[0][1],c[0][0]),0)
-        else:
-            isinside = 0
-        if isinside != 1:
-            contours[key] = []
-            pass
-        else:
-            print key
+    contours2 = features.filterContours(contours,mainBND[0])
 
     #wykrycie wierzchołków
-    corners,longestContour, cornerObj = features.findCorners(shape,contours)
+    corners,longestContour, cornerObj = features.findCorners(shape,contours2)
+
+    #wykrycie lini Hougha na podstawie najdłuższego konturu
+    lines = features.findLines(longestContour,shape)
 
     #lista wierzchołkow zwiazanych z bryła i zredukowanych
     cornerObj = features.eliminateSimilarCorners(cornerObj,mainBND,shape)
 
     # wytypowanie wierzchołków najbardziej lewego i prawego
     corners = np.asarray(cornerObj)
-    # na wypadek gdyby nie znalazły się żadne wierzchołki wewnątrz głównego konturu
-    if corners.size > 0:
-        #znajdz wierzchołek o naniejszej wspolrzednej X
-        leftX = min(corners.T[0])
-        leftIndex = corners.T.tolist()[0].index(leftX)
-        leftY = corners.T[1][leftIndex]
-        left = (leftX,leftY)
 
-        #znajdz wierzcholek o najwiekszej wspolrzednj X
-        rightX = max(corners.T[0])
-        rightIndex = corners.T.tolist()[0].index(rightX)
-        rightY = corners.T[1][rightIndex]
-        right = (rightX,rightY)
-    else:
-        left = (0,0)
-        right = (shape[1],shape[0])
+    left,right = an.getMostLeftAndRightCorner(corners,shape)
 
-    tmpbinary = np.zeros(shape,dtype='uint8')
-    tmpbinary[:][:] = 0
-
-    for c in longestContour:
-        tmpbinary[c] = 1
-
-
-    rho = 1
-    # theta = 0.025
-    theta = 0.025
-    threshold = 125
-    #znaldź linie hougha
-    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)[0]
-
-    crossing = features.getCrossings(lines,edge)
-
+    crossing = an.getCrossings(lines,shape)
 
     # cornerList - wierzchołki obiektu
     # cornerCNT - wierzchołki na konturach
@@ -175,7 +138,7 @@ def markFeatures(src,stuff):
         img = mark.YellowPoint(img,(p[1],p[0]))
 
     # zazmacz lini hougha
-    features.drawLines(lines,img)
+    mark.drawHoughLines(lines,img)
 
     return img
 
