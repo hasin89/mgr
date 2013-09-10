@@ -84,14 +84,15 @@ def drawHoughLines(lines,img):
 
     # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
     m,n,w = img.shape
-
-    for (rho, theta) in lines[:20]:
+    factor = 0
+    for (rho, theta) in lines[:4]:
         # blue for infinite lines (only draw the 5 strongest)
         x0 = np.cos(theta)*rho
         y0 = np.sin(theta)*rho
         pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
         pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-        cv2.line(img, pt1, pt2, (128,0,128), 2)
+        cv2.line(img, pt1, pt2, (128,0,factor), 2)
+        factor += 50
     return img
 
 def drawPoly(img,poly):
@@ -99,6 +100,6 @@ def drawPoly(img,poly):
     points = poly.points
     pairs = [(points[i],points[i+1]) for i in range(0,len(points)-1)]
     for pt1,pt2 in pairs:
-        cv2.line(img,(pt1[1],pt1[0]),(pt2[1],pt2[0]),(255,255,255),11)
+        cv2.line(img,pt1,pt2,(255,255,255),11)
 
     return img
