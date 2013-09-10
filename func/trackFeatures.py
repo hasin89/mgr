@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 from math import sqrt
+from math import cos
+from collections import Counter
+import math
+from numpy.testing.utils import _assert_valid_refcount
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -15,6 +19,7 @@ Usage:
 '''
 
 import cv2
+import math
 import browse
 import numpy as np
 import func.gamma as gamma
@@ -593,5 +598,76 @@ def findLines(longestContour,shape):
     threshold = 125
     #znaldź linie hougha
     lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)[0]
-
+    lines = eliminateSimilarLines(lines)
     return lines
+
+def eliminateSimilarLines(linesNP):
+    lines = linesNP.tolist()
+    similar = {}
+    for L in lines:
+        similar[L[1]] = []
+        for line in lines:
+            if (line[0] != L[0]) & (line[1] != L[1]):
+                x = abs(L[1]-line[1])
+                value = cos(x)
+                if value>0.9:
+                    similar[L[1]].append(line[1])
+
+    # print "p"
+    flag = True
+    while (flag):
+        max = 0
+        kmax = 0
+
+        for k,v in similar.iteritems():
+            ll = len(v)
+            if ll > max:
+                max = ll
+                kmax =  k
+
+        if kmax!=0:
+            for k in similar[kmax]:
+                if k in similar.keys():
+                    del similar[k]
+            similar[kmax].append(kmax)
+            mean = np.mean(similar[kmax])
+            min = 4
+            kmin = -1
+            for i in similar[kmax]:
+                if abs(i-mean)<min:
+                    min = abs(i-mean)
+                    kmin = i
+
+            del similar[kmax]
+            similar[kmin] = []
+        else:
+            flag = False
+
+    finalLines = {}
+
+    for l in lines:
+        if l[1] in similar.keys():
+            finalLines[l[0]] = l
+
+
+    ff = [f[1] for f in finalLines.values()]
+    c = Counter(ff)
+    for k,v in c.iteritems():
+        if v == 1:
+            pass
+        else:
+            print k
+            suma = 0
+            indexes = []
+            for key,value in finalLines.iteritems():
+                if value[1] == k:
+                    suma += value[0]
+                    indexes.append(key)
+            if len(indexes)>0:
+                mean = int(suma/v)
+                for i in indexes:
+                    del finalLines[i]
+                finalLines[mean] = [mean,k]
+
+
+    return finalLines.values()
