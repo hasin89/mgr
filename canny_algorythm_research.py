@@ -87,7 +87,7 @@ def analise(edge,img=0):
 
     left,right = an.getMostLeftAndRightCorner(corners,shape)
 
-    crossing,poly = an.getCrossings(lines,shape)
+    crossing,poly = an.getCrossings(lines,shape,mainBND[0])
 
     # cornerList - wierzchołki obiektu
     # cornerCNT - wierzchołki na konturach
@@ -135,11 +135,11 @@ def markFeatures(src,stuff):
     img = mark.YellowPoint(img,point)
 
     for p in crossing:
-        img = mark.YellowPoint(img,(p[1],p[0]))
+        img = mark.YellowPoint(img,p)
 
         # zazmacz lini hougha
     mark.drawHoughLines(lines,img)
-    # img = mark.drawPoly(img,poly)
+    img = mark.drawPoly(img,poly)
 
     return img
 
