@@ -29,3 +29,9 @@ class Polyline(object):
         self.begining = (0,0)
         self.ending = (0,0)
 
+class Vertex(object):
+    def __init__(self):
+        self.lines = []
+        self.point = (0,0)
+
+
