@@ -63,65 +63,56 @@ def getCrossings(lines,shape,boundaries):
 
     segments = {}
     for i in range(0,len(linesGeneral)):
-        segments[i] = obj.Segment()
+        segments[linesGeneral[i]] = obj.Segment()
+        segments[linesGeneral[i]].line = linesGeneral[i]
 
     crossing = []
     good = 0
     j= 0
+    vertexes = []
 
+    #znajdź włąscie przecięcia
     for i,(k,l) in enumerate(pairs):
 
         p = get2LinesCrossing(k,l)
         # sprawdź czy leży wewnątrz ramy
-        isinside = cv2.pointPolygonTest(boundaries,(p[1],p[0]),0)
+        isinside = cv2.pointPolygonTest(boundaries,p,0)
         if isinside>0:
             if p != False:
                 crossing.append(p)
 
-                if j>= len(segments):
-                    pass
-                else:
-                    s1 = segments[j]
-                    s1.line = k
-                    s1.neibourLines.append(l)
-                    s1.points.append(p)
-                    segments[j] = s1
+                s1 = segments[k]
+                s1.neibourLines.append(l)
+                s1.points.append(p)
+                segments[k] = s1
 
-                    if j+1 < len(linesGeneral):
-                        s2 = segments[j+1]
-                        s2.neibourLines.append(k)
-                        s2.points.append(p)
-                        segments[j+1] = s2
+                s2 = segments[l]
+                s2.neibourLines.append(k)
+                s2.points.append(p)
+                segments[l] = s2
 
-
-                    else:
-                        s2 = segments[0]
-                        s2.neibourLines.append(k)
-                        s2.points.append(p)
-                        segments[0] = s2
-                j+=1
-
-
-            good += 1
+                good += 1
 
         else:
             pass
         if good == len(linesGeneral):
             break
 
-    totalSegments = segments.copy()
+    segmentsList = segments.values()
+    totalSegments = segmentsList
     poly = obj.Polyline()
-    if len(segments[0].points) > 1:
-        poly.segments[0] = segments[0]
-        poly.begining = segments[0].points[0]
-        poly.ending = segments[0].points[1]
-        poly.points.append(segments[0].points[0])
-        poly.points.append(segments[0].points[1])
-        segments[0].points = []
+
+    if len(segmentsList[0].points) > 1:
+        poly.segments[0] = segmentsList[0]
+        poly.begining = segmentsList[0].points[0]
+        poly.ending = segmentsList[0].points[1]
+        poly.points.append(segmentsList[0].points[0])
+        poly.points.append(segmentsList[0].points[1])
+        segmentsList[0].points = []
 
         i = 1
         while(i<len(linesGeneral)):
-            s = segments[i]
+            s = segmentsList[i]
             if (poly.ending in s.points) & (len(s.points)>1):
                 index = s.points.index(poly.ending)
                 if index == 0:
@@ -131,8 +122,8 @@ def getCrossings(lines,shape,boundaries):
                 p = s.points[index]
                 poly.ending = p
                 poly.points.append(p)
-                poly.segments[len(poly.segments)] = segments[i]
-                segments[i].points = []
+                poly.segments[len(poly.segments)] = segmentsList[i]
+                segmentsList[i].points = []
                 i=0
             else:
                 i += 1
@@ -202,7 +193,7 @@ def get2LinesCrossing((a1,b1,c1),(a2,b2,c2)):
     Wca = c1 * a2 - c2 * a1
 
     if Wab != 0:
-        p = (int(Wca/Wab),int(Wbc/Wab))
+        p = (int(Wbc/Wab),int(Wca/Wab))
         return p
     else:
         return False
