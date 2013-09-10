@@ -3,6 +3,8 @@ from math import sqrt
 
 __author__ = 'tomek'
 
+
+import cv2
 import numpy as np
 import func.objects as obj
 
@@ -35,7 +37,7 @@ def getMostLeftAndRightCorner(corners,shape):
     return left,right
 
 
-def getCrossings(lines,shape):
+def getCrossings(lines,shape,boundaries):
     '''
     zwraca punkty bedące przecięciami podanych prostych
 
@@ -54,33 +56,58 @@ def getCrossings(lines,shape):
     pairs = [(linesGeneral[i],linesGeneral[i+1]) for i in range(0,len(linesGeneral)-1)]
     pairs.append((linesGeneral[-1],linesGeneral[0]))
 
+    pairs.extend([(linesGeneral[i],linesGeneral[i+2]) for i in range(0,len(linesGeneral)-2)])
+
+    # pairs.extend([(linesGeneral[i],linesGeneral[i+3]) for i in range(0,len(linesGeneral)-3)])
+
+
     segments = {}
     for i in range(0,len(linesGeneral)):
         segments[i] = obj.Segment()
 
     crossing = []
+    good = 0
+    j= 0
+
     for i,(k,l) in enumerate(pairs):
 
         p = get2LinesCrossing(k,l)
-        if p != False:
-            crossing.append(p)
+        # sprawdź czy leży wewnątrz ramy
+        isinside = cv2.pointPolygonTest(boundaries,(p[1],p[0]),0)
+        if isinside>0:
+            if p != False:
+                crossing.append(p)
 
-            s1 = segments[i]
-            s1.line = k
-            s1.neibourLines.append(l)
-            s1.points.append(p)
-            segments[i] = s1
+                if j>= len(segments):
+                    pass
+                else:
+                    s1 = segments[j]
+                    s1.line = k
+                    s1.neibourLines.append(l)
+                    s1.points.append(p)
+                    segments[j] = s1
 
-            if i+1 < len(linesGeneral):
-                s2 = segments[i+1]
-                s2.neibourLines.append(k)
-                s2.points.append(p)
-                segments[i+1] = s2
-            else:
-                s2 = segments[0]
-                s2.neibourLines.append(k)
-                s2.points.append(p)
-                segments[0] = s2
+                    if j+1 < len(linesGeneral):
+                        s2 = segments[j+1]
+                        s2.neibourLines.append(k)
+                        s2.points.append(p)
+                        segments[j+1] = s2
+
+
+                    else:
+                        s2 = segments[0]
+                        s2.neibourLines.append(k)
+                        s2.points.append(p)
+                        segments[0] = s2
+                j+=1
+
+
+            good += 1
+
+        else:
+            pass
+        if good == len(linesGeneral):
+            break
 
     totalSegments = segments.copy()
     poly = obj.Polyline()
@@ -109,9 +136,6 @@ def getCrossings(lines,shape):
                 i=0
             else:
                 i += 1
-
-
-
 
     return crossing,poly
 
