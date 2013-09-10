@@ -93,3 +93,12 @@ def drawHoughLines(lines,img):
         pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
         cv2.line(img, pt1, pt2, (128,0,128), 2)
     return img
+
+def drawPoly(img,poly):
+
+    points = poly.points
+    pairs = [(points[i],points[i+1]) for i in range(0,len(points)-1)]
+    for pt1,pt2 in pairs:
+        cv2.line(img,(pt1[1],pt1[0]),(pt2[1],pt2[0]),(255,255,255),11)
+
+    return img

@@ -604,16 +604,19 @@ def findLines(longestContour,shape):
 def eliminateSimilarLines(linesNP):
     lines = linesNP.tolist()
     similar = {}
+    #szukanie lini o małym wzajemnym kacie nachylenia (czyli o podobnym wgl osi OY)
     for L in lines:
         similar[L[1]] = []
         for line in lines:
             if (line[0] != L[0]) & (line[1] != L[1]):
                 x = abs(L[1]-line[1])
                 value = cos(x)
+                #todo - jeśli znajdzie się para prostych równoległych,
+                # ale odległych o znaczną odległość (równoległe boki) to trzeba temu bedzie zaradzić
                 if value>0.9:
                     similar[L[1]].append(line[1])
 
-    # print "p"
+    # wybieranie lini która jest najbliższa średniej z lini o podobnym kącie nachylenia
     flag = True
     while (flag):
         max = 0
@@ -649,7 +652,7 @@ def eliminateSimilarLines(linesNP):
         if l[1] in similar.keys():
             finalLines[l[0]] = l
 
-
+    # sprawdzenie czy nie znalazły się jakieś równoległe do siebie linie i jeśli tak to wybranie średniej z nich
     ff = [f[1] for f in finalLines.values()]
     c = Counter(ff)
     for k,v in c.iteritems():
@@ -669,5 +672,6 @@ def eliminateSimilarLines(linesNP):
                     del finalLines[i]
                 finalLines[mean] = [mean,k]
 
+    lines = finalLines.values()
 
-    return finalLines.values()
+    return lines

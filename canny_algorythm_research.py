@@ -87,7 +87,7 @@ def analise(edge,img=0):
 
     left,right = an.getMostLeftAndRightCorner(corners,shape)
 
-    crossing = an.getCrossings(lines,shape)
+    crossing,poly = an.getCrossings(lines,shape)
 
     # cornerList - wierzchołki obiektu
     # cornerCNT - wierzchołki na konturach
@@ -100,12 +100,12 @@ def analise(edge,img=0):
     # crossing - punkty przeciecia prostych
 
 
-    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing)
+    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing,poly)
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing) = stuff
+    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing,poly) = stuff
 
     img = src.copy()
     img[:][:] = (0,0,0)
@@ -128,7 +128,7 @@ def markFeatures(src,stuff):
     #to zaznaczało srodki ciezkosci na biaol
     #img = mark.points(img,centrum)
 
-#zaznaczanie centrum obrazu na żółto
+    #zaznaczanie centrum obrazu na żółto
     xc0 = img.shape[0]/2
     yc0 = img.shape[1]/2
     point = (yc0,xc0)
@@ -137,8 +137,9 @@ def markFeatures(src,stuff):
     for p in crossing:
         img = mark.YellowPoint(img,(p[1],p[0]))
 
-    # zazmacz lini hougha
+        # zazmacz lini hougha
     mark.drawHoughLines(lines,img)
+    # img = mark.drawPoly(img,poly)
 
     return img
 
@@ -298,12 +299,6 @@ def run():
                 #     # cv2.circle(img_up, pt1 ,7,(2,255,255,0),3)
                 #     # cv2.circle(img_up, pt2 ,7,(2,255,255,0),3)
                 #     # cv2.line(img_up, pt1, pt2, (120,255,0), 4)
-                #
-                #
-                #
-                #
-                #
-                # print 'd'
 
 
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
@@ -336,49 +331,7 @@ def run():
                 # cv2.imwrite(f,im)
 
 
-                # h = cv2.pyrDown(h)
-                # FirstCycleFlag = True
-                # # browse.browse(edge)
-                # if FirstCycleFlag:
-                #     edgeSum = np.logical_or(edge,np.zeros(edge.shape))
-                #     FirstCycleFlag = False
-                # else:
-                #     edgeSum = np.logical_or(edgeSum,edge)
-                # f = 'img/results/histogram/3_avg/%d_src.jpg' % (i)
-                # cv2.imwrite(f, img)
-                # f = 'img/results/histogram/3_avg/%d_edge.jpg' % (i)
-                # cv2.imwrite(f, edge)
-
-        # edge_gamma = np.array(edgeSum,dtype='uint8')
-        # vis = edge_gamma.copy()
-        # vis[edge_gamma != 0] = 255
-        # f2 = 'img/results/gamma_sum/3/edge_%d_gamma_sum_45_155.jpg' % i
-        # cv2.imwrite(f2, vis)
-        # browse.browse(vis)
     ch = cv2.waitKey()
 
 
 run()
-# p = []
-# for k in range(2,12):
-#     p.append((k,2))
-# for k in range(3,41):
-#     p.append((11,k))
-# for k in range(3,12):
-#     z = (13-k,40)
-#     p.append(z)
-# for k in range(3,40):
-#     z = (2,42-k)
-#     p.append(z)
-#
-# a = (2,2)
-# b = (11,2)
-# c = (11,40)
-# d = (2,40)
-#
-# m=(0,20)
-# n=(3,2)
-# l = features.getLine(a,c)
-# dist = features.calcDistances(p)
-# cc = features.findCorners([p])
-# print cc

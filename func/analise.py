@@ -4,6 +4,7 @@ from math import sqrt
 __author__ = 'tomek'
 
 import numpy as np
+import func.objects as obj
 
 
 def getMostLeftAndRightCorner(corners,shape):
@@ -53,13 +54,66 @@ def getCrossings(lines,shape):
     pairs = [(linesGeneral[i],linesGeneral[i+1]) for i in range(0,len(linesGeneral)-1)]
     pairs.append((linesGeneral[-1],linesGeneral[0]))
 
+    segments = {}
+    for i in range(0,len(linesGeneral)):
+        segments[i] = obj.Segment()
+
     crossing = []
-    for k,l in pairs:
+    for i,(k,l) in enumerate(pairs):
+
         p = get2LinesCrossing(k,l)
         if p != False:
             crossing.append(p)
 
-    return crossing
+            s1 = segments[i]
+            s1.line = k
+            s1.neibourLines.append(l)
+            s1.points.append(p)
+            segments[i] = s1
+
+            if i+1 < len(linesGeneral):
+                s2 = segments[i+1]
+                s2.neibourLines.append(k)
+                s2.points.append(p)
+                segments[i+1] = s2
+            else:
+                s2 = segments[0]
+                s2.neibourLines.append(k)
+                s2.points.append(p)
+                segments[0] = s2
+
+    totalSegments = segments.copy()
+    poly = obj.Polyline()
+    if len(segments[0].points) > 1:
+        poly.segments[0] = segments[0]
+        poly.begining = segments[0].points[0]
+        poly.ending = segments[0].points[1]
+        poly.points.append(segments[0].points[0])
+        poly.points.append(segments[0].points[1])
+        segments[0].points = []
+
+        i = 1
+        while(i<len(linesGeneral)):
+            s = segments[i]
+            if (poly.ending in s.points) & (len(s.points)>1):
+                index = s.points.index(poly.ending)
+                if index == 0:
+                    index = 1
+                else:
+                    index = 0
+                p = s.points[index]
+                poly.ending = p
+                poly.points.append(p)
+                poly.segments[len(poly.segments)] = segments[i]
+                segments[i].points = []
+                i=0
+            else:
+                i += 1
+
+
+
+
+    return crossing,poly
 
 
 def convertLineToGeneralForm((rho,theta),shape):
@@ -210,4 +264,15 @@ def calcDistFromLine(point,line):
     dist = abs(a*x+b*y+c)
     dist = dist/(1.0*sqrt(pow(a,2)+pow(b,2)))
 
+    return dist
+
+
+def calcLength(p1,p2):
+    x1 = p1[0]
+    y1 = p1[1]
+
+    x2 = p2[0]
+    y2 = p2[1]
+
+    dist = sqrt(pow(x2-x1,2)+pow(y2-y1,2))
     return dist
