@@ -2,8 +2,6 @@
 from math import sqrt
 from math import cos
 from collections import Counter
-import math
-from numpy.testing.utils import _assert_valid_refcount
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -19,8 +17,6 @@ Usage:
 '''
 
 import cv2
-import math
-import browse
 import numpy as np
 import func.gamma as gamma
 import func.analise as an
@@ -576,7 +572,7 @@ def findMainObject(objectsCNT,shape):
     return mainCNT
 
 
-def findLines(longestContour,shape):
+def findLines(longestContour,shape,threshold=125):
     '''
     zwraca linie Hougha na podstawie podanego konturu
 
@@ -595,10 +591,13 @@ def findLines(longestContour,shape):
     rho = 1
     # theta = 0.025
     theta = 0.025
-    threshold = 125
     #znaldź linie hougha
-    lines = cv2.HoughLines(tmpbinary,rho,theta,threshold)[0]
-    lines = eliminateSimilarLines(lines)
+    lines2 = cv2.HoughLines(tmpbinary,rho,theta,threshold)
+    if lines2 != None:
+        lines = lines2[0]
+        lines = eliminateSimilarLines(lines)
+    else:
+        lines = False
     return lines
 
 def eliminateSimilarLines(linesNP):
@@ -675,3 +674,44 @@ def eliminateSimilarLines(linesNP):
     lines = finalLines.values()
 
     return lines
+
+
+def eliminateRedundantToMainLines(mainLines,otherLines):
+    '''
+    usuwa linie podobne do konturu głownego
+    return mainLines, otherlines
+    '''
+    for L in mainLines:
+        for i,line in enumerate(otherLines):
+            if (line[0] != L[0]) & (line[1] != L[1]):
+                x = abs(L[1]-line[1])
+                value = cos(x)
+                if value>0.95:
+                    if abs(L[0]-line[0]) < 100:
+                        del otherLines[i]
+    return mainLines,otherLines
+
+
+def findInnerLines(contours,longestContour,shape,lines):
+    '''
+     szuka krawędzi wewnątrz konturu na podstawie konturu nienajdłuższego
+     eliminuje te podobne do najdłuższego
+
+     return lines, otherlines
+    '''
+    #szukanie krawędzi wewnętrznych
+    index = contours.values().index(longestContour)
+    otherContours = contours.copy()
+    otherContours[index] = []
+    otherLines = []
+    for c in otherContours.itervalues():
+        if len(c)>0:
+            ol = findLines(c,shape,50)
+            if ol != False:
+                otherLines.append(ol[0])
+    otherLines = eliminateSimilarLines(np.asarray(otherLines))
+    lines,otherLines = eliminateRedundantToMainLines(lines,otherLines)
+
+    return lines, otherLines
+
+

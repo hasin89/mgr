@@ -21,6 +21,19 @@ class Segment(object):
         else:
             self.length = 0
 
+    def setPoints(self,p1,p2):
+        self.points = [p1,p2]
+        self.calcLength()
+        self.getLine()
+
+    def getLine(self):
+        if len(self.points) == 2:
+            p1 = self.points[0]
+            p2 = self.points[1]
+            self.line = an.getLine(p1,p2,0)
+        else:
+            self.line = (0,0,0)
+
 
 class Polyline(object):
     def __init__(self):
@@ -30,8 +43,8 @@ class Polyline(object):
         self.ending = (0,0)
 
 class Vertex(object):
-    def __init__(self):
-        self.lines = []
-        self.point = (0,0)
+    def __init__(self,p):
+        self.segments = []
+        self.point = p
 
 

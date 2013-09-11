@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from math import sqrt
+from func import objects as obj
 
 __author__ = 'tomek'
 
@@ -71,7 +72,7 @@ def getCrossings(lines,shape,boundaries):
     j= 0
     vertexes = []
 
-    #znajdź włąscie przecięcia
+    #znajdź właściwe przecięcia
     for i,(k,l) in enumerate(pairs):
 
         p = get2LinesCrossing(k,l)
@@ -99,22 +100,23 @@ def getCrossings(lines,shape,boundaries):
             break
 
     segmentsList = segments.values()
-    totalSegments = segmentsList
     poly = obj.Polyline()
 
-    if len(segmentsList[0].points) > 1:
+    flag = [True for true in segmentsList]
+    if (len(segmentsList[0].points)) > 1 & flag[0]:
         poly.segments[0] = segmentsList[0]
         poly.begining = segmentsList[0].points[0]
         poly.ending = segmentsList[0].points[1]
         poly.points.append(segmentsList[0].points[0])
         poly.points.append(segmentsList[0].points[1])
-        segmentsList[0].points = []
+        flag[0] = False
 
         i = 1
         while(i<len(linesGeneral)):
             s = segmentsList[i]
-            if (poly.ending in s.points) & (len(s.points)>1):
-                index = s.points.index(poly.ending)
+            points = list(segmentsList[i].points)
+            if (poly.ending in points) & flag[i]:
+                index = points.index(poly.ending)
                 if index == 0:
                     index = 1
                 else:
@@ -123,7 +125,7 @@ def getCrossings(lines,shape,boundaries):
                 poly.ending = p
                 poly.points.append(p)
                 poly.segments[len(poly.segments)] = segmentsList[i]
-                segmentsList[i].points = []
+                flag[i] = False
                 i=0
             else:
                 i += 1
@@ -160,12 +162,19 @@ def convertLineToGeneralForm((rho,theta),shape):
     return line
 
 
-def getLine((y1,x1),(y2,x2)):
+def getLine(p1,p2,switch = 1):
     '''
     zwraca parametry prostej Ax+By+C na podstawie podanych dwóch punktów
     return (a,b,c)
     '''
     line = []
+
+    if switch == 1:
+        (y1,x1) = p1
+        (y2,x2) = p2
+    else:
+        (x1,y1) = p1
+        (x2,y2) = p2
 
     dx = x2-x1
     dy = y2-y1
@@ -269,8 +278,8 @@ def calcDistFromLine(point,line):
     '''
     liczy odleglosc punktu (x,y) od prostej (a,b,c)
     '''
-    x = point[1]
-    y = point[0]
+    x = point[0]
+    y = point[1]
 
     a = line[0]
     b = line[1]
@@ -283,6 +292,9 @@ def calcDistFromLine(point,line):
 
 
 def calcLength(p1,p2):
+    '''
+    liczy odległość między punktami
+    '''
     x1 = p1[0]
     y1 = p1[1]
 
@@ -291,3 +303,43 @@ def calcLength(p1,p2):
 
     dist = sqrt(pow(x2-x1,2)+pow(y2-y1,2))
     return dist
+
+
+def getInnerSegments(otherLines,shape,poly):
+    '''
+    szukanie odcinka będącego krawędzią wewnętrzeną
+
+    '''
+    result = {}
+    for l in otherLines:
+        l = convertLineToGeneralForm(l,shape)
+        min = 100000
+        points = list(poly.points)
+        del points[-1]
+        for p in points:
+            dist = calcDistFromLine(p,l)
+            if dist < min:
+                min = dist
+                Pmin1 = p
+        del points[points.index(Pmin1)]
+
+        #szukanie drugoego punktu
+        min = 100000
+        for p in points:
+            dist = calcDistFromLine(p,l)
+            if dist < min:
+                min = dist
+                Pmin2 = p
+
+        s = obj.Segment()
+        s.setPoints(Pmin1,Pmin2)
+        result[l] = s
+    # Pmin2 = (0,0)
+
+    return result.values()
+
+def addSegmentsToPoly(poly,innerSegments):
+    for s in innerSegments:
+        s.line
+
+    pass

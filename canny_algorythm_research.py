@@ -2,6 +2,7 @@
 from cmath import sqrt
 from numpy.lib.function_base import average
 from func import histogram
+from func.analise import getInnerSegments
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -89,6 +90,12 @@ def analise(edge,img=0):
 
     crossing,poly = an.getCrossings(lines,shape,mainBND[0])
 
+    lines, innerLines = features.findInnerLines(contours,longestContour,shape,lines)
+
+    innerSegments = an.getInnerSegments(innerLines,shape,poly)
+
+    an.addSegmentsToPoly(poly,innerSegments)
+
     # cornerList - wierzchołki obiektu
     # cornerCNT - wierzchołki na konturach
     # contours - słownik konturów
@@ -100,12 +107,12 @@ def analise(edge,img=0):
     # crossing - punkty przeciecia prostych
 
 
-    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing,poly)
+    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines)
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing,poly) = stuff
+    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines) = stuff
 
     img = src.copy()
     img[:][:] = (0,0,0)
@@ -117,7 +124,7 @@ def markFeatures(src,stuff):
     img = mark.singleContour(img,longestContour)
 
     #zaznaczenie wierzchołków na niebiesko
-    img = mark.corners(img,cornerList)
+    # img = mark.corners(img,cornerList)
 
     #zaznaczenie interesujących miejsc (obiektu glownego na niebiesko
     img = mark.object(img,mainBND)
@@ -132,14 +139,18 @@ def markFeatures(src,stuff):
     xc0 = img.shape[0]/2
     yc0 = img.shape[1]/2
     point = (yc0,xc0)
-    img = mark.YellowPoint(img,point)
+    # img = mark.YellowPoint(img,point)
 
-    for p in crossing:
-        img = mark.YellowPoint(img,p)
+    for p in innerSegments:
+        img = mark.YellowPoint(img,p.points[0])
+        img = mark.YellowPoint(img,p.points[1])
+        img = mark.drawSegment(img,p.points[0],p.points[1])
 
         # zazmacz lini hougha
     mark.drawHoughLines(lines,img)
+    mark.drawHoughLines(innerLines,img)
     img = mark.drawPoly(img,poly)
+
 
     return img
 
