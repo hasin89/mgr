@@ -242,23 +242,23 @@ def calcDistances(segment,size):
 
             # jeśli index mieści się w zakresie indexów odcinka
             if i+size < len(segment):
-                (a,b,c) = getLine(segment[i],segment[i+size])
+                (a,b,c) = getLine(segment[i],segment[i+size],1)
 
             # jeżeli index jest większy od największego indexu to doklej element z poczatku
             else:
                 index = abs(len(segment)-i-size)
-                (a,b,c) = getLine(segment[i],segment[index])
+                (a,b,c) = getLine(segment[i],segment[index],1)
 
             # oblicz odległość punktu środkowego od prostej
 
             # jeśli index mieści się w zakresie indexów
             if i+size/2 < len(segment):
-                dist = calcDistFromLine(segment[i+size/2],(a,b,c))
+                dist = calcDistFromLine((segment[i+size/2][1],segment[i+size/2][0]),(a,b,c))
 
             # jeżeli index jest większy od największego indexu to weź element z poczatku
             else:
                 index = abs(len(segment)-i-size/2)
-                dist = calcDistFromLine(segment[index],(a,b,c))
+                dist = calcDistFromLine((segment[index][1],segment[index][0]),(a,b,c))
 
 
             # jesli dystans jest większy niż 2
