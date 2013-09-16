@@ -7,6 +7,7 @@ __author__ = 'tomek'
 
 import cv2
 import numpy as np
+import copy
 import func.objects as obj
 
 
@@ -63,6 +64,8 @@ def getCrossings(lines,shape,boundaries):
 
 
     segments = {}
+    vertexes = {}
+
     for i in range(0,len(linesGeneral)):
         segments[linesGeneral[i]] = obj.Segment()
         segments[linesGeneral[i]].line = linesGeneral[i]
@@ -70,9 +73,9 @@ def getCrossings(lines,shape,boundaries):
     crossing = []
     good = 0
     j= 0
-    vertexes = []
 
     #znajdź właściwe przecięcia
+    #todo budowa wierzchołków strukturalnych
     for i,(k,l) in enumerate(pairs):
 
         p = get2LinesCrossing(k,l)
@@ -92,6 +95,11 @@ def getCrossings(lines,shape,boundaries):
                 s2.points.append(p)
                 segments[l] = s2
 
+                vertex = obj.Vertex(p)
+                vertex.lines.append(l)
+                vertex.lines.append(k)
+                vertexes[p] = vertex
+
                 good += 1
 
         else:
@@ -102,6 +110,13 @@ def getCrossings(lines,shape,boundaries):
     segmentsList = segments.values()
     poly = obj.Polyline()
 
+    for s in segments.values():
+
+        vertexes[s.points[0]].neibours[s.line] = s.points[1]
+        vertexes[s.points[1]].neibours[s.line] = s.points[0]
+
+
+    #  nie wiem czy to do czegoś potrzbne jest
     flag = [True for true in segmentsList]
     if (len(segmentsList[0].points)) > 1 & flag[0]:
         poly.segments[0] = segmentsList[0]
@@ -130,7 +145,7 @@ def getCrossings(lines,shape,boundaries):
             else:
                 i += 1
 
-    return crossing,poly
+    return crossing,poly,vertexes
 
 
 def convertLineToGeneralForm((rho,theta),shape):
@@ -338,8 +353,86 @@ def getInnerSegments(otherLines,shape,poly):
 
     return result.values()
 
-def addSegmentsToPoly(poly,innerSegments):
+def addSegmentsToStructure(innerSegments,vertexes):
     for s in innerSegments:
-        s.line
+        for p in s.points:
+            vertexes[p].lines.append(s.line)
+            index = s.points.index(p)
+            if index == 1:
+                vertexes[p].neibours[s.line] = s.points[0]
+            else:
+                vertexes[p].neibours[s.line] = s.points[1]
 
     pass
+
+def makeFaces(vertexesORG):
+
+    vertexes = copy.deepcopy(vertexesORG)
+    line = {}
+    i=-1
+    for v in vertexes.values():
+        start = v.point
+        #wszystkie trasy z tego punktu
+        routes = []
+        #jeśli sa jeszcze jacyś sąsiedzi startu
+        while len(vertexes[start].neibours.values())>0:
+            # zacznij spisywać trasę
+            route = []
+            route.append(start)
+            point = start
+
+            while len(vertexes[point].neibours.values())>0:
+
+                #pobierz sasiadów
+                neibours = vertexes[point].neibours.values()
+
+                #usuń tych co już byli na tej trasie
+                for r in route:
+                    if r in neibours:
+
+                        del vertexes[point].neibours[vertexes[point].neibours.index(r)]
+
+                #jeżeli już nikt nie został (zatoczyła się pętla)
+                if len(neibours) == 0:
+                    break
+
+                #wybierz następnika
+                point = neibours[0]
+                route.append(point)
+
+                pass
+                #usuń poprzednika
+                # del vertexes[point].neibours[vertexes[point].neibours.values().index(point)]
+            routes.append(route)
+            pass
+
+            # while start not in point.neibours.values():
+            #     for l in line:
+            #         line[i].append(neibours[i])
+            #
+            #     neibours = vertexes[point].neibours.values()
+            #     if start in neibours:
+            #         break
+
+
+
+
+
+        pass
+    # line[i].append(point)
+    # flag = True
+    # j=0
+    # while(flag):
+    #     points = list(vertexes[point].neibours.values())
+    #     for l in line[i]:
+    #         if l in points:
+    #             del points[points.index(l)]
+    #     if len(points)>0:
+    #         point = points[0]
+    #         line[i].append(point)
+    #     else:
+    #         break
+
+
+
+    return line
