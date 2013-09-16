@@ -44,7 +44,25 @@ class Polyline(object):
 
 class Vertex(object):
     def __init__(self,p):
-        self.segments = []
+        self.lines = []
         self.point = p
+        self.neibours = {}
 
+    def __str__(self):
+        return "v( %d , %d )" % (self.point[0],self.point[1])
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        if (other.__class__.__name__ == 'Vertex') & (other.point == self.point):
+            return True
+        else:
+            return False
+
+
+
+class Face(object):
+    def __init__(self):
+        self.vertices = []
 
