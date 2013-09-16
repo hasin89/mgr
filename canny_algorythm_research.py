@@ -72,10 +72,10 @@ def analise(edge,img=0):
     rectangle = np.asarray([cont])
 
     # to jest usuwanie konturow nie zwiazanych z obiektem glownym
-    # contours2 = features.filterContours(contours,mainBND[0])
+    contours2 = features.filterContours(contours,mainBND[0])
 
     #wykrycie wierzchołków związanych z konturem
-    corners,longestContour, cornerObj = features.findCorners(shape,contours)
+    corners,longestContour, cornerObj = features.findCorners(shape,contours2)
 
     #wykrycie lini Hougha na podstawie najdłuższego konturu
     lines = features.findLines(longestContour,shape)
