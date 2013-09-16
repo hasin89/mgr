@@ -72,10 +72,10 @@ def analise(edge,img=0):
     rectangle = np.asarray([cont])
 
     # to jest usuwanie konturow nie zwiazanych z obiektem glownym
-    contours2 = features.filterContours(contours,mainBND[0])
+    # contours2 = features.filterContours(contours,mainBND[0])
 
-    #wykrycie wierzchołków
-    corners,longestContour, cornerObj = features.findCorners(shape,contours2)
+    #wykrycie wierzchołków związanych z konturem
+    corners,longestContour, cornerObj = features.findCorners(shape,contours)
 
     #wykrycie lini Hougha na podstawie najdłuższego konturu
     lines = features.findLines(longestContour,shape)
@@ -88,13 +88,15 @@ def analise(edge,img=0):
 
     left,right = an.getMostLeftAndRightCorner(corners,shape)
 
-    crossing,poly = an.getCrossings(lines,shape,mainBND[0])
+    crossing,poly,vertexes = an.getCrossings(lines,shape,mainBND[0])
 
     lines, innerLines = features.findInnerLines(contours,longestContour,shape,lines)
 
     innerSegments = an.getInnerSegments(innerLines,shape,poly)
 
-    an.addSegmentsToPoly(poly,innerSegments)
+    an.addSegmentsToStructure(innerSegments,vertexes)
+
+    # an.makeFaces(vertexes)
 
     # cornerList - wierzchołki obiektu
     # cornerCNT - wierzchołki na konturach
@@ -121,10 +123,10 @@ def markFeatures(src,stuff):
     img = mark.contours(img,contours)
 
     #zaznaczenie najdluższego znalezionego konturu na zielono
-    img = mark.singleContour(img,longestContour)
+    # img = mark.singleContour(img,longestContour)
 
     #zaznaczenie wierzchołków na niebiesko
-    # img = mark.corners(img,cornerList)
+    img = mark.corners(img,cornerList)
 
     #zaznaczenie interesujących miejsc (obiektu glownego na niebiesko
     img = mark.object(img,mainBND)
@@ -133,7 +135,7 @@ def markFeatures(src,stuff):
     img = mark.point(img,right)
 
     #to zaznaczało srodki ciezkosci na biaol
-    #img = mark.points(img,centrum)
+    # img = mark.points(img,centrum)
 
     #zaznaczanie centrum obrazu na żółto
     xc0 = img.shape[0]/2
@@ -141,15 +143,15 @@ def markFeatures(src,stuff):
     point = (yc0,xc0)
     # img = mark.YellowPoint(img,point)
 
-    for p in innerSegments:
-        img = mark.YellowPoint(img,p.points[0])
-        img = mark.YellowPoint(img,p.points[1])
-        img = mark.drawSegment(img,p.points[0],p.points[1])
+    # for p in innerSegments:
+        # img = mark.YellowPoint(img,p.points[0])
+        # img = mark.YellowPoint(img,p.points[1])
+        # img = mark.drawSegment(img,p.points[0],p.points[1])
 
         # zazmacz lini hougha
-    mark.drawHoughLines(lines,img)
-    mark.drawHoughLines(innerLines,img)
-    img = mark.drawPoly(img,poly)
+    # mark.drawHoughLines(lines,img)
+    # mark.drawHoughLines(innerLines,img)
+    # img = mark.drawPoly(img,poly)
 
 
     return img
