@@ -82,7 +82,7 @@ def analise(edge,img=0):
 
     #lista wierzchołkow zwiazanych z bryła i zredukowanych
     cornerObj = features.eliminateSimilarCorners(cornerObj,mainBND,shape)
-
+    # av
     # wytypowanie wierzchołków najbardziej lewego i prawego
     corners = np.asarray(cornerObj)
 
