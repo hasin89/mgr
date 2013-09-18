@@ -556,6 +556,8 @@ def findMainObject(objectsCNT,shape,img=0):
     min_index = -1
     min_cost = shape[0]*shape[1]
 
+    marker = False
+
     for n,c in enumerate(objectsCNT):
         moments = cv2.moments(c)
         # policzenie srodkow ciezkosci figur
@@ -714,7 +716,7 @@ def findInnerLines(contours,longestContour,shape,lines):
     for c in otherContours.itervalues():
         if len(c)>0:
             ol = findLines(c,shape,50)
-            if ol.__class__.__name__ == 'ndarray':
+            if ol != False:
                 otherLines.append(ol[0])
     otherLines = eliminateSimilarLines(np.asarray(otherLines))
     lines,otherLines = eliminateRedundantToMainLines(lines,otherLines)

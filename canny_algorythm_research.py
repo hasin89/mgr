@@ -46,8 +46,46 @@ def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
 
     return edge_filtred
 
+def analise(mainBND,contours,shape,linesThres=125):
 
-def analise(edge,img=0):
+    # to jest usuwanie konturow nie zwiazanych z obiektem glownym
+    contours2 = features.filterContours(contours,mainBND)
+
+    #wykrycie wierzchołków związanych z konturem
+    cornersCNT,longestContour, corners = features.findCorners(shape,contours2)
+
+    #wykrycie lini Hougha na podstawie najdłuższego konturu
+    lines = features.findLines(longestContour,shape,linesThres)
+
+    #lista wierzchołkow zwiazanych z bryła i zredukowanych
+    corners = features.eliminateSimilarCorners(corners,mainBND,shape)
+    # av
+
+    if lines.__class__.__name__ == 'list':
+        crossing,poly,vertexes = an.getCrossings(lines,shape,mainBND)
+
+    # wytypowanie wierzchołków najbardziej lewego i prawego
+    # corners = np.asarray(cornerObj)
+    # left,right = an.getMostLeftAndRightCorner(np.asarray(corners),shape)
+        left,right = an.getMostLeftAndRightCorner(np.asarray(crossing),shape)
+
+        an.tryMatch(crossing,left,right)
+
+        lines, innerLines = features.findInnerLines(contours,longestContour,shape,lines)
+
+        innerSegments = an.getInnerSegments(innerLines,shape,poly)
+
+        an.addSegmentsToStructure(innerSegments,vertexes)
+    else:
+        innerLines = False
+        innerSegments = False
+        crossing = False
+        left = right = poly = False
+
+    return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines
+
+
+def find(edge,img=0):
     '''
         znajduje kontury, rogi konturu,
     return (cornerList,mainCNT,cornerCNT,contours_up,longestContour)
@@ -61,40 +99,28 @@ def analise(edge,img=0):
     objects = features.findObjects(shape,contours)
 
     # mainCNT zawiera  wielokatna obwiednie bryły
-    mainBND = features.findMainObject(objects,shape)
+    mainBND,marker = features.findMainObject(objects,shape,img)
 
     #prostokatna obwiednia bryły
     #przepisanie z listy na tablice numpy
-    mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainBND[0][:,0]]]  )
-    x,y,w,h = cv2.boundingRect(mainCNT2)
+    # mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainBND[:,0]]]  )
+    # mainCNT3 = np.asarray( [[(p[0],p[1]) for p in marker[:,0]]]  )
+    x,y,w,h = cv2.boundingRect(mainBND)
     mainSqrBnd = (x,y,w,h)
-    cont = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
-    rectangle = np.asarray([cont])
 
-    # to jest usuwanie konturow nie zwiazanych z obiektem glownym
-    contours2 = features.filterContours(contours,mainBND[0])
 
-    #wykrycie wierzchołków związanych z konturem
-    corners,longestContour, cornerObj = features.findCorners(shape,contours2)
+    # cont = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
+    # rectangle = np.asarray([cont])
 
-    #wykrycie lini Hougha na podstawie najdłuższego konturu
-    lines = features.findLines(longestContour,shape)
+    corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines = analise(mainBND,contours,shape)
 
-    #lista wierzchołkow zwiazanych z bryła i zredukowanych
-    cornerObj = features.eliminateSimilarCorners(cornerObj,mainBND,shape)
-    # av
-    # wytypowanie wierzchołków najbardziej lewego i prawego
-    corners = np.asarray(cornerObj)
+    if marker.__class__.__name__ != 'bool':
+        xm,ym,wm,hm = cv2.boundingRect(marker)
+        markerSqrBnd = (xm,ym,wm,hm)
+        mainStuff = analise(marker,contours,shape)
+    else:
+        markerSqrBnd = (0,0,0,0)
 
-    left,right = an.getMostLeftAndRightCorner(corners,shape)
-
-    crossing,poly,vertexes = an.getCrossings(lines,shape,mainBND[0])
-
-    lines, innerLines = features.findInnerLines(contours,longestContour,shape,lines)
-
-    innerSegments = an.getInnerSegments(innerLines,shape,poly)
-
-    an.addSegmentsToStructure(innerSegments,vertexes)
 
     # an.makeFaces(vertexes)
 
@@ -108,13 +134,19 @@ def analise(edge,img=0):
     # lines - proste zwrócone przez algorytm hougha
     # crossing - punkty przeciecia prostych
 
+    # left = 0
+    # right = 0
+    # crossing = 0
+    # poly = 0
+    # innerSegments = 0
+    # innerLines = 0
 
-    return (cornerObj,mainSqrBnd,corners,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines)
+    return (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd)
 
 
 def markFeatures(src,stuff):
 
-    (cornerList,mainBND,cornerCNT,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines) = stuff
+    (cornerList,mainBND,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd) = stuff
 
     img = src.copy()
     img[:][:] = (0,0,0)
@@ -130,9 +162,10 @@ def markFeatures(src,stuff):
 
     #zaznaczenie interesujących miejsc (obiektu glownego na niebiesko
     img = mark.object(img,mainBND)
+    img = mark.object(img,markerSqrBnd)
 
-    img = mark.point(img,left)
-    img = mark.point(img,right)
+    # img = mark.point(img,marker)
+    # img = mark.point(img,right)
 
     #to zaznaczało srodki ciezkosci na biaol
     # img = mark.points(img,centrum)
@@ -149,8 +182,8 @@ def markFeatures(src,stuff):
         # img = mark.drawSegment(img,p.points[0],p.points[1])
 
         # zazmacz lini hougha
-    # mark.drawHoughLines(lines,img)
-    # mark.drawHoughLines(innerLines,img)
+    mark.drawHoughLines(lines,img)
+    mark.drawHoughLines(innerLines,img)
     # img = mark.drawPoly(img,poly)
 
 
@@ -259,14 +292,13 @@ def run():
                 print (n,j)
 
                 edge = track(img, i,gaussKernel,gammaFactor)
-
-                f = 'img/results/edges/%d/folder_%d_%d_edge_.jpg' % (folder,folder, i)
-                # cv2.imwrite(f,edge)
+                f = 'img/results/matching/%d/folder_%d_%d_edge_.jpg' % (folder,folder, i)
+                cv2.imwrite(f,edge)
 
                 hy,a,b,mirror_line = countNonZeroRowsY(edge)
-                f = 'img/results/contours/%d_histogram_Y.jpg' % (i)
                 #
-                # cv2.imwrite(f,hy)
+                f = 'img/results/matching/%d/folder_%d_gray.jpg' % (folder,i)
+                cv2.imwrite(f,gray)
 
                 hx,c,d = countNonZeroRowsX(edge)
                 # f = 'img/results/histogram/3_avg/%d_histogram_X.jpg' % (i)
@@ -282,7 +314,7 @@ def run():
 
 
 
-                stuff_up = analise(edge_up)
+                stuff_up = find(edge_up)
 
 
 
@@ -320,7 +352,7 @@ def run():
 
                 # dolny obraz
 
-                stuff_down = analise(edge_down,img_down)
+                stuff_down = find(edge_down,img_down)
 
                 img_down = markFeatures(img_down,stuff_down)
 
@@ -330,15 +362,15 @@ def run():
                 im = np.append(img_up,img_down,0)
 
                 height = img_up.shape[0]
-                l_d = [l for l in stuff_down[5]]
-                r_d = [l for l in stuff_down[6]]
+                # l_d = [l for l in stuff_down[5]]
+                # r_d = [l for l in stuff_down[6]]
 
-                left_down = (l_d[0],l_d[1]+height)
-                right_down = (r_d[0],r_d[1]+height)
-
-
-                cv2.line(im,stuff_up[5],left_down,(255,255,0),2)
-                cv2.line(im,stuff_up[6],right_down,(255,255,0),2)
+                # left_down = (l_d[0],l_d[1]+height)
+                # right_down = (r_d[0],r_d[1]+height)
+                #
+                #
+                # cv2.line(im,stuff_up[5],left_down,(255,255,0),2)
+                # cv2.line(im,stuff_up[6],right_down,(255,255,0),2)
 
                 # f = 'img/results/contours/parowanie/folder_%d_%d_cont2_all_.png' % (folder,i)
                 # cv2.imwrite(f,im)

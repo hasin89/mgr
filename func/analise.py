@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import copy
 import func.objects as obj
+import timeit
 
 
 def getMostLeftAndRightCorner(corners,shape):
@@ -80,30 +81,31 @@ def getCrossings(lines,shape,boundaries):
 
         p = get2LinesCrossing(k,l)
         # sprawdź czy leży wewnątrz ramy
-        isinside = cv2.pointPolygonTest(boundaries,p,0)
-        if isinside>0:
-            if p != False:
-                crossing.append(p)
+        if p != False:
+            isinside = cv2.pointPolygonTest(boundaries,p,0)
+            if isinside>0:
+                if p != False:
+                    crossing.append(p)
 
-                s1 = segments[k]
-                s1.neibourLines.append(l)
-                s1.points.append(p)
-                segments[k] = s1
+                    s1 = segments[k]
+                    s1.neibourLines.append(l)
+                    s1.points.append(p)
+                    segments[k] = s1
 
-                s2 = segments[l]
-                s2.neibourLines.append(k)
-                s2.points.append(p)
-                segments[l] = s2
+                    s2 = segments[l]
+                    s2.neibourLines.append(k)
+                    s2.points.append(p)
+                    segments[l] = s2
 
-                vertex = obj.Vertex(p)
-                vertex.lines.append(l)
-                vertex.lines.append(k)
-                vertexes[p] = vertex
+                    vertex = obj.Vertex(p)
+                    vertex.lines.append(l)
+                    vertex.lines.append(k)
+                    vertexes[p] = vertex
 
-                good += 1
+                    good += 1
 
-        else:
-            pass
+            else:
+                pass
         if good == len(linesGeneral):
             break
 
@@ -111,9 +113,9 @@ def getCrossings(lines,shape,boundaries):
     poly = obj.Polyline()
 
     for s in segments.values():
-
-        vertexes[s.points[0]].neibours[s.line] = s.points[1]
-        vertexes[s.points[1]].neibours[s.line] = s.points[0]
+        if len(s.points) > 1:
+            vertexes[s.points[0]].neibours[s.line] = s.points[1]
+            vertexes[s.points[1]].neibours[s.line] = s.points[0]
 
 
     #  nie wiem czy to do czegoś potrzbne jest
@@ -130,7 +132,7 @@ def getCrossings(lines,shape,boundaries):
         while(i<len(linesGeneral)):
             s = segmentsList[i]
             points = list(segmentsList[i].points)
-            if (poly.ending in points) & flag[i]:
+            if (poly.ending in points) & flag[i] & (len(segmentsList[i].points) > 1):
                 index = points.index(poly.ending)
                 if index == 0:
                     index = 1
@@ -202,6 +204,10 @@ def getLine(p1,p2,switch = 1):
         b = 0
         c = x1
 
+
+
+    F = crossProduct((x1,y1,1),(x2,y2,1))
+    E = (a,b,c)
     return (a,b,c)
 
 
@@ -212,15 +218,42 @@ def get2LinesCrossing((a1,b1,c1),(a2,b2,c2)):
 
     return p = (x,y)
     '''
-    Wab = a1*b2 - a2*b1
-    Wbc = b1 * c2 - b2 * c1
-    Wca = c1 * a2 - c2 * a1
 
-    if Wab != 0:
-        p = (int(Wbc/Wab),int(Wca/Wab))
+    # reczny iloczyn wektorowy kxl = (x,y,z)
+
+    # z
+    # Wab = a1 * b2 - a2 * b1
+    #
+    # # x
+    # Wbc = b1 * c2 - b2 * c1
+    #
+    # # y
+    # Wca = c1 * a2 - c2 * a1
+
+    k = (a1,b1,c1)
+    l = (a2,b2,c2)
+    (x,y,z) = crossProduct(k,l)
+
+    if z != 0:
+        p = (int(x/z),int(y/z))
         return p
     else:
         return False
+
+def crossProduct(k,l):
+    '''
+    iloczyn wektorowy do krótkich wektorów
+    '''
+    a1,b1,c1 = k
+    a2,b2,c2 = l
+
+    z = a1 * b2 - a2 * b1
+
+    x = b1 * c2 - b2 * c1
+
+    y = c1 * a2 - c2 * a1
+
+    return (x,y,z)
 
 
 def calcDistances(segment,size):
@@ -436,3 +469,20 @@ def makeFaces(vertexesORG):
 
 
     return line
+
+
+def tryMatch(corners,left,right):
+    min = left[0]
+    max = right[0]
+    Xs = []
+
+    for c in corners:
+        x = c[0]-min
+        x /= float(max-min)
+        Xs.append((x,(c[0],c[1])))
+    Xs.sort()
+    return Xs
+
+
+# [(0.0, 962), (0.077071290944123308, 569), (0.39306358381502893, 354), (1.0, 775)]
+# [(0.0, 349), (0.069602272727272721, 1092), (0.42329545454545453, 320), (1.0, 648)]
