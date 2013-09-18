@@ -2,6 +2,7 @@
 from math import sqrt
 from math import cos
 from collections import Counter
+import browse
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -20,6 +21,8 @@ import cv2
 import numpy as np
 import func.gamma as gamma
 import func.analise as an
+
+import func.markElements as mark
 
 def canny(img, gauss_kernel=11, gammaFactor=0.45):
     """
@@ -393,7 +396,7 @@ def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
     for pt in corners:
 
         #sprawdź czy leży w konturze i w jakiej odległości
-        result = cv2.pointPolygonTest(mainCnt[0],pt,1)
+        result = cv2.pointPolygonTest(mainCnt,pt,1)
 
         #jeżeli leżą wewnątrz
         if result>=0:
@@ -535,13 +538,13 @@ def findObjects(shape,contours):
         cv2.rectangle(tmpbinary,A,B,255,-1)
         # cv2.drawContours(tmpbinary,r,-1,255,-1)
 
-    #znajdź kontury wśród białych prostokątów na czarnym tle
+        #znajdź kontury wśród białych prostokątów na czarnym tle
     cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
     return cntTMP
 
 
-def findMainObject(objectsCNT,shape):
+def findMainObject(objectsCNT,shape,img=0):
     '''
      znajduje obiekt najbardziej po srodku plaszczyzny (bo to nie beda krawedzie lustra)
     '''
@@ -559,6 +562,10 @@ def findMainObject(objectsCNT,shape):
         yc = int(moments['m01']/moments['m00'])
         xc = int(moments['m10']/moments['m00'])
 
+        # if 'uint8' == img.dtype.name:
+        if (xc > 200) & (xc <900):
+            marker = objectsCNT[n]
+
         #odległosc od srodka
         dx = xc0-xc
         dy = yc0-yc
@@ -567,9 +574,9 @@ def findMainObject(objectsCNT,shape):
         if cost.real < min_cost:
             min_cost = cost.real
             min_index = n
-    mainCNT = [objectsCNT[min_index]]
+    mainCNT = objectsCNT[min_index]
 
-    return mainCNT
+    return mainCNT,marker
 
 
 def findLines(longestContour,shape,threshold=125):
@@ -707,7 +714,7 @@ def findInnerLines(contours,longestContour,shape,lines):
     for c in otherContours.itervalues():
         if len(c)>0:
             ol = findLines(c,shape,50)
-            if ol != False:
+            if ol.__class__.__name__ == 'ndarray':
                 otherLines.append(ol[0])
     otherLines = eliminateSimilarLines(np.asarray(otherLines))
     lines,otherLines = eliminateRedundantToMainLines(lines,otherLines)
