@@ -46,7 +46,7 @@ def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
 
     return edge_filtred
 
-def analise(mainBND,contours,shape,linesThres=125):
+def analise(mainBND,contours,shape,linesThres=25):
 
     # to jest usuwanie konturow nie zwiazanych z obiektem glownym
     contours2 = features.filterContours(contours,mainBND)
@@ -82,7 +82,7 @@ def analise(mainBND,contours,shape,linesThres=125):
         crossing = False
         left = right = poly = False
 
-    return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines
+    return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,contours2
 
 
 def find(edge,img=0):
@@ -98,26 +98,27 @@ def find(edge,img=0):
     # objects zawiera obiekty znalezione na podstawie konturu
     objects = features.findObjects(shape,contours)
 
-    # mainCNT zawiera  wielokatna obwiednie bryły
-    mainBND,marker = features.findMainObject(objects,shape,img)
+    for tmpobj in objects:
+        for i in range(0,len(tmpobj)-1):
+            mark.drawSegment(img,(tmpobj[i][0][0],tmpobj[i][0][1]) ,(tmpobj[i+1][0][0],tmpobj[i+1][0][1]))
 
-    #prostokatna obwiednia bryły
-    #przepisanie z listy na tablice numpy
-    # mainCNT2 = np.asarray( [[(p[0],p[1]) for p in mainBND[:,0]]]  )
-    # mainCNT3 = np.asarray( [[(p[0],p[1]) for p in marker[:,0]]]  )
+
+    # obiekt główny
+    mainBND = features.findMainObject(objects,shape,img)
     x,y,w,h = cv2.boundingRect(mainBND)
+    # mainSqrBnd zawiera  wielokatna obwiednie bryły
     mainSqrBnd = (x,y,w,h)
 
+    #znajdź elementy obiektu głównego
+    corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
 
-    # cont = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
-    # rectangle = np.asarray([cont])
+    #znalezienie markera
+    marker = features.findMarker(objects,shape,edge,img)
 
-    corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines = analise(mainBND,contours,shape)
-
-    if marker.__class__.__name__ != 'bool':
+    if marker is not None:
         xm,ym,wm,hm = cv2.boundingRect(marker)
         markerSqrBnd = (xm,ym,wm,hm)
-        mainStuff = analise(marker,contours,shape)
+        # corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(marker,contours.copy(),shape)
     else:
         markerSqrBnd = (0,0,0,0)
 
@@ -141,7 +142,7 @@ def find(edge,img=0):
     # innerSegments = 0
     # innerLines = 0
 
-    return (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd)
+    return (corners,mainSqrBnd,cnt2,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd)
 
 
 def markFeatures(src,stuff):
@@ -149,7 +150,7 @@ def markFeatures(src,stuff):
     (cornerList,mainBND,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd) = stuff
 
     img = src.copy()
-    img[:][:] = (0,0,0)
+    # img[:][:] = (0,0,0)
 
     # zaznaczenie krawędzi na biało
     img = mark.contours(img,contours)
@@ -268,15 +269,18 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     # list = range(1,16)
-    list = [5]
+    list = [18]
 
-    folder = 4
+    folder = 6
     # print list
     for i in list:
         edge = None
         filename = 'img/%d/%d.JPG' % (folder, i)
         print(filename)
-        img = cv2.imread(filename)
+        imgT = cv2.imread(filename)
+        shape = (round(0.25*imgT.shape[1]),round(0.25*imgT.shape[0]))
+        img = np.empty(shape,dtype='uint8')
+        img = cv2.resize(imgT,img.shape)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         h, w = img.shape[:2]
 
@@ -286,7 +290,7 @@ def run():
 
         for j in gammas:
             # 11
-            for n in [11]:
+            for n in [5]:
                 gaussKernel = n
                 gammaFactor = j
                 print (n,j)
@@ -314,36 +318,9 @@ def run():
 
 
 
-                stuff_up = find(edge_up)
-
-
+                stuff_up = find(edge_up,img_up)
 
                 img_up = markFeatures(img_up,stuff_up)
-
-
-                #
-                # linesGeneral = []
-                #
-                # for (rho, theta) in stuff_up[7]:
-                #     # blue for infinite lines (only draw the 5 strongest)
-                #     a,b,c = features.convertToGeneral((rho,theta),img_up)
-                #     linesGeneral.append((a,b,c))
-                #
-                #     #test czy te proste generalne sie zgadzaja
-                #
-                #     #dolna ekranu
-                #     y1 = img_up.shape[0]
-                #     x1 = int((b*y1+c)/(-a))
-                #
-                #     #górna krawedź
-                #     x2 = int(-c/a)
-                #     y2 = 0
-                #
-                #     # pt1 = (x1,y1)
-                #     # pt2 = (x2,y2)
-                #     # cv2.circle(img_up, pt1 ,7,(2,255,255,0),3)
-                #     # cv2.circle(img_up, pt2 ,7,(2,255,255,0),3)
-                #     # cv2.line(img_up, pt1, pt2, (120,255,0), 4)
 
 
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
@@ -359,9 +336,9 @@ def run():
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_dol_.png' % (folder,folder,i)
                 cv2.imwrite(f,img_down)
 
-                im = np.append(img_up,img_down,0)
-
-                height = img_up.shape[0]
+                # im = np.append(img_up,img_down,0)
+                #
+                # height = img_up.shape[0]
                 # l_d = [l for l in stuff_down[5]]
                 # r_d = [l for l in stuff_down[6]]
 

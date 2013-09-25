@@ -55,7 +55,7 @@ def point(img,point):
 
 
 def YellowPoint(img,point):
-    cv2.circle(img, point ,10,(0,255,244,0),5)
+    cv2.circle(img, point ,3,(0,255,244,0),1)
 
     return img
 
@@ -83,7 +83,10 @@ def object(img,mainCNT):
 def drawHoughLines(lines,img):
 
     # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
-    m,n,w = img.shape
+    if len(img.shape) == 2:
+        m,n = img.shape
+    else:
+        m,n,w = img.shape
     factor = 0
     if lines.__class__.__name__ != 'bool':
         for (rho, theta) in lines:
@@ -92,7 +95,7 @@ def drawHoughLines(lines,img):
             y0 = np.sin(theta)*rho
             pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
             pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-            cv2.line(img, pt1, pt2, (128,0,128), 2)
+            cv2.line(img, pt1, pt2, (128,0,128), 1)
             factor += 50
     return img
 

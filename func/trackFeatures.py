@@ -58,7 +58,7 @@ def threshold(img, gauss_kernel=11, gammaFactor=0.45, threshold = 50):
     gray_filtred = gamma.correction(gray,gammaFactor)
     gray_filtred = cv2.GaussianBlur(gray_filtred, (k, k), 0)
 
-    edge_filtred = cv2.threshold(gray_filtred,threshold,maxval=1,type=cv2.THRESH_BINARY)[1]
+    edge_filtred = cv2.threshold(gray_filtred,threshold,maxval=1,type=cv2.THRESH_BINARY_INV)[1]
 
     vis_filtred = img.copy()
     vis_filtred[edge_filtred != 0] = (0, 255, 0)
@@ -587,10 +587,9 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
     marker = False
 
     rho = 0.25
-    threshold=30
+    thre=30
     theta = 0.01
 
-    #znaldź linie hougha
     # cv2.imshow('preview', v)
     # cv2.waitKey()
     # cv2.destroyAllWindows()
@@ -617,13 +616,20 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
         if squares is not None:
             objTMP = img[y:y+h,x:x+w]
 
-            e,v = adaptiveThreshold(objTMP,13,1,0)
+            e,v = threshold(objTMP,11,1,128)
+
+            cross = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
+            # e = cv2.erode(e,cross)
+            # e = cv2.dilate(e,cross)
+
+            v [e != 0] = (0,255,0)
 
             mask = np.zeros(e.shape,dtype='uint8')
+
             cv2.fillConvexPoly(mask,squares,1)
 
             corn = 0
-            corn = cv2.goodFeaturesToTrack(e,16,0.01,5,corn,mask)
+            corn = cv2.goodFeaturesToTrack(e,20,0.01,10,corn,mask)
             corn = np.reshape(corn,(-1,2))
 
             Xmax,Ymax = corn.argmax(0)
@@ -632,15 +638,18 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             P1 = (corn[Xmax][0],corn[Xmax][1])
             P2 = (corn[Xmin][0],corn[Xmin][1])
 
+            squares = [(s[0],s[1]) for s in squares]
+
             points1 = points2 = 0
 
-            line = an.getLine(P1,P2,0)
-            mark.drawSegment(v,P1,P2)
+            line = an.getLine(squares[0],squares[2],0)
+            mark.drawSegment(v,squares[0],squares[2])
+
             distances = []
             for p in corn:
                 dist = an.calcDistFromLine(p,line)
                 distances.append(dist)
-                if dist<5:
+                if dist<10:
                     points1+=1
 
             distancesTMP = list(distances)
@@ -651,24 +660,30 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             B = corn[distances.index(max(distancesTMP))]
             a= (A[0],A[1])
             b= (B[0],B[1])
-            line = an.getLine(a,b,0)
+            line = an.getLine(squares[1],squares[3],0)
 
-            mark.drawSegment(v,a,b)
+            mark.drawSegment(v,squares[1],squares[3])
 
             distances = []
             for p in corn:
                 dist = an.calcDistFromLine(p,line)
                 distances.append(dist)
-                if dist<5:
+                if dist<10:
                     points2+=1
 
+            win = (9,9)
+            zeroZone = (-1,-1)
+            criteria = (cv2.TERM_CRITERIA_COUNT,50,0.01)
+
+            cv2.cornerSubPix(e,corn,win,zeroZone,criteria)
 
             for c,d in corn:
-                mark.YellowPoint(v,(c,d))
+                mark.YellowPoint(v,(int(c),int(d)))
+                pass
 
-            # f = 'img/results/matching/%d/folder_%d_match_%d.png' % (6,16,n)
-            # cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
-            if (points1 == points2 == 4):
+            f = 'img/results/matching/%d/folder_%d_match_%d_%d.png' % (6,16,n,shape[0])
+            cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+            if (points1 == points2 == 6):
                 print 'szachownica'
                 print n
                 markerCNT = objectsCNT[n]
