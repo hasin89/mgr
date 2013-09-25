@@ -2,6 +2,7 @@
 from math import sqrt
 from math import cos
 from collections import Counter
+from numpy.core.defchararray import array
 import browse
 
 __author__ = 'tomek'
@@ -36,7 +37,7 @@ def canny(img, gauss_kernel=11, gammaFactor=0.45):
     gray_filtred = cv2.GaussianBlur(gray_filtred, (k, k), 0)
 
     thrs1 = 20
-    kernel = 3
+    kernel = 9
     ratio = 3
     edge_filtred = cv2.Canny(gray_filtred, thrs1, thrs1 * ratio, kernel)
 
@@ -102,7 +103,7 @@ def gammaSum(img,gaussKernel=11):
     return vis
 
 
-def findContours(edge):
+def findContours(edgeORG):
     '''
     łaczy punkty w kontur
     '''
@@ -111,6 +112,7 @@ def findContours(edge):
     i = 0
     flag = True
 
+    edge = edgeORG.copy()
     nonzeros = np.nonzero(edge)
     pointX = nonzeros[1][0]
     pointY = nonzeros[0][0]
@@ -353,7 +355,7 @@ def eliminateSimilarCorners_old(corners,nimg,border=35):
             for k in range(len(non[0])):
                 vecY = non[0][k]-border
                 vecX = non[1][k]-border
-                if (vecX != 0) & (vecY != 0):
+                if (vecX != 0) and (vecY != 0):
                     new = (x+vecX, y+vecY)
                     semi[(x,y)] = []
                     semi[(x,y)].append((x,y))
@@ -439,7 +441,7 @@ def eliminateSimilarCorners(corners,mainCnt,shape,border=35):
                 vecX = non[1][k]-border
 
                 #jezeli jest to wektor niezerowy to mamy punkt
-                if (vecX != 0) | (vecY != 0):
+                if (vecX != 0) or (vecY != 0):
                     new = (x+vecX, y+vecY)
                     semi[(x,y)].append(new)
                     try:
@@ -539,7 +541,7 @@ def findObjects(shape,contours):
         # cv2.drawContours(tmpbinary,r,-1,255,-1)
 
         #znajdź kontury wśród białych prostokątów na czarnym tle
-    cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
     return cntTMP
 
@@ -564,10 +566,6 @@ def findMainObject(objectsCNT,shape,img=0):
         yc = int(moments['m01']/moments['m00'])
         xc = int(moments['m10']/moments['m00'])
 
-        # if 'uint8' == img.dtype.name:
-        if (xc > 200) & (xc <900):
-            marker = objectsCNT[n]
-
         #odległosc od srodka
         dx = xc0-xc
         dy = yc0-yc
@@ -578,7 +576,112 @@ def findMainObject(objectsCNT,shape,img=0):
             min_index = n
     mainCNT = objectsCNT[min_index]
 
-    return mainCNT,marker
+    return mainCNT
+
+
+def findMarker(objectsCNT,shape,edge=0,img=0):
+    '''
+     znajduje obiekt markera
+    '''
+
+    marker = False
+
+    rho = 0.25
+    threshold=30
+    theta = 0.01
+
+    #znaldź linie hougha
+    # cv2.imshow('preview', v)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
+    markerCNT = None
+
+    for n,c in enumerate(objectsCNT):
+        x,y,w,h = cv2.boundingRect(c)
+        objTMP = edge[y:y+h,x:x+w]
+
+        contours, hierarchy = cv2.findContours(objTMP, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        squares = None
+
+        min = 1000000
+        for cnt in contours:
+            cnt_len = cv2.arcLength(cnt, True)
+            cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
+            if len(cnt) == 4 and cv2.contourArea(cnt) > 1000 and cv2.isContourConvex(cnt):
+                cnt = cnt.reshape(-1, 2)
+                # max_cos = np.max([angle_cos( cnt[i], cnt[(i+1) % 4], cnt[(i+2) % 4] ) for i in xrange(4)])
+                if cv2.contourArea(cnt) < min:
+                    min = cv2.contourArea(cnt)
+                    squares = cnt
+
+        if squares is not None:
+            objTMP = img[y:y+h,x:x+w]
+
+            e,v = adaptiveThreshold(objTMP,13,1,0)
+
+            mask = np.zeros(e.shape,dtype='uint8')
+            cv2.fillConvexPoly(mask,squares,1)
+
+            corn = 0
+            corn = cv2.goodFeaturesToTrack(e,16,0.01,5,corn,mask)
+            corn = np.reshape(corn,(-1,2))
+
+            Xmax,Ymax = corn.argmax(0)
+            Xmin,Ymin = corn.argmin(0)
+
+            P1 = (corn[Xmax][0],corn[Xmax][1])
+            P2 = (corn[Xmin][0],corn[Xmin][1])
+
+            points1 = points2 = 0
+
+            line = an.getLine(P1,P2,0)
+            mark.drawSegment(v,P1,P2)
+            distances = []
+            for p in corn:
+                dist = an.calcDistFromLine(p,line)
+                distances.append(dist)
+                if dist<5:
+                    points1+=1
+
+            distancesTMP = list(distances)
+
+            A = corn[distances.index(max(distancesTMP))]
+            del distancesTMP[distancesTMP.index(max(distancesTMP))]
+
+            B = corn[distances.index(max(distancesTMP))]
+            a= (A[0],A[1])
+            b= (B[0],B[1])
+            line = an.getLine(a,b,0)
+
+            mark.drawSegment(v,a,b)
+
+            distances = []
+            for p in corn:
+                dist = an.calcDistFromLine(p,line)
+                distances.append(dist)
+                if dist<5:
+                    points2+=1
+
+
+            for c,d in corn:
+                mark.YellowPoint(v,(c,d))
+
+            # f = 'img/results/matching/%d/folder_%d_match_%d.png' % (6,16,n)
+            # cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+            if (points1 == points2 == 4):
+                print 'szachownica'
+                print n
+                markerCNT = objectsCNT[n]
+
+    return markerCNT
+
+def angle_cos(p0, p1, p2):
+    '''
+    liczy cosinus kąta opisanego 3 punktami
+    '''
+
+    d1, d2 = (p0-p1).astype('float'), (p2-p1).astype('float')
+    return abs( np.dot(d1, d2) / np.sqrt( np.dot(d1, d1)*np.dot(d2, d2) ) )
 
 
 def findLines(longestContour,shape,threshold=125):
@@ -616,13 +719,18 @@ def eliminateSimilarLines(linesNP):
     for L in lines:
         similar[L[1]] = []
         for line in lines:
-            if (line[0] != L[0]) & (line[1] != L[1]):
+            if (line[0] != L[0]) and (line[1] != L[1]):
                 x = abs(L[1]-line[1])
                 value = cos(x)
                 #todo - jeśli znajdzie się para prostych równoległych,
                 # ale odległych o znaczną odległość (równoległe boki) to trzeba temu bedzie zaradzić
                 if value>0.9:
-                    similar[L[1]].append(line[1])
+                    #JEŚLI SĄ RÓWNOLEGŁE ALE NIE BLISKO SIEBIE TO NIE LICZ ICH
+                    if value>0.999 and abs(line[0]-L[0])>20 :
+                        pass
+                    else:
+                        # pass
+                        similar[L[1]].append(line[1])
 
     # wybieranie lini która jest najbliższa średniej z lini o podobnym kącie nachylenia
     flag = True
@@ -692,7 +800,7 @@ def eliminateRedundantToMainLines(mainLines,otherLines):
     '''
     for L in mainLines:
         for i,line in enumerate(otherLines):
-            if (line[0] != L[0]) & (line[1] != L[1]):
+            if (line[0] != L[0]) and (line[1] != L[1]):
                 x = abs(L[1]-line[1])
                 value = cos(x)
                 if value>0.95:
