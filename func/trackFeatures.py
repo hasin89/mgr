@@ -594,8 +594,9 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
     # cv2.waitKey()
     # cv2.destroyAllWindows()
     markerCNT = None
-
+    cornersFinal = 0
     for n,c in enumerate(objectsCNT):
+        corners = 0
         x,y,w,h = cv2.boundingRect(c)
         objTMP = edge[y:y+h,x:x+w]
 
@@ -628,15 +629,15 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
 
             cv2.fillConvexPoly(mask,squares,1)
 
-            corn = 0
-            corn = cv2.goodFeaturesToTrack(e,20,0.01,10,corn,mask)
-            corn = np.reshape(corn,(-1,2))
 
-            Xmax,Ymax = corn.argmax(0)
-            Xmin,Ymin = corn.argmin(0)
+            corners = cv2.goodFeaturesToTrack(e,20,0.01,10,corners,mask)
+            corners = np.reshape(corners,(-1,2))
 
-            P1 = (corn[Xmax][0],corn[Xmax][1])
-            P2 = (corn[Xmin][0],corn[Xmin][1])
+            # Xmax,Ymax = corners.argmax(0)
+            # Xmin,Ymin = corners.argmin(0)
+            #
+            # P1 = (corners[Xmax][0],corners[Xmax][1])
+            # P2 = (corners[Xmin][0],corners[Xmin][1])
 
             squares = [(s[0],s[1]) for s in squares]
 
@@ -646,7 +647,7 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             mark.drawSegment(v,squares[0],squares[2])
 
             distances = []
-            for p in corn:
+            for p in corners:
                 dist = an.calcDistFromLine(p,line)
                 distances.append(dist)
                 if dist<10:
@@ -654,10 +655,10 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
 
             distancesTMP = list(distances)
 
-            A = corn[distances.index(max(distancesTMP))]
+            A = corners[distances.index(max(distancesTMP))]
             del distancesTMP[distancesTMP.index(max(distancesTMP))]
 
-            B = corn[distances.index(max(distancesTMP))]
+            B = corners[distances.index(max(distancesTMP))]
             a= (A[0],A[1])
             b= (B[0],B[1])
             line = an.getLine(squares[1],squares[3],0)
@@ -665,7 +666,7 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             mark.drawSegment(v,squares[1],squares[3])
 
             distances = []
-            for p in corn:
+            for p in corners:
                 dist = an.calcDistFromLine(p,line)
                 distances.append(dist)
                 if dist<10:
@@ -673,22 +674,23 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
 
             win = (9,9)
             zeroZone = (-1,-1)
-            criteria = (cv2.TERM_CRITERIA_COUNT,50,0.01)
+            criteria = (cv2.TERM_CRITERIA_COUNT,100,0.001)
 
-            cv2.cornerSubPix(e,corn,win,zeroZone,criteria)
+            cv2.cornerSubPix(e,corners,win,zeroZone,criteria)
 
-            for c,d in corn:
-                mark.YellowPoint(v,(int(c),int(d)))
+            for x,y in corners:
+                mark.YellowPoint(v,(int(x),int(y)))
                 pass
 
             f = 'img/results/matching/%d/folder_%d_match_%d_%d.png' % (6,16,n,shape[0])
-            cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
             if (points1 == points2 == 6):
+                cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
                 print 'szachownica'
                 print n
-                markerCNT = objectsCNT[n]
+                markerCNT = x,y,w,h = cv2.boundingRect(c)
+                cornersFinal = corners
 
-    return markerCNT
+    return (markerCNT,cornersFinal)
 
 def angle_cos(p0, p1, p2):
     '''

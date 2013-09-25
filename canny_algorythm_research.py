@@ -24,6 +24,7 @@ import func.trackFeatures as features
 import func.markElements as mark
 import func.objects as obj
 import func.analise as an
+import func.calibrate as ca
 import func.histogram
 
 
@@ -45,6 +46,7 @@ def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
     # edge_filtred,vis = features.adaptiveThreshold(img,gauss_kernel,0.5,-3)
 
     return edge_filtred
+
 
 def analise(mainBND,contours,shape,linesThres=25):
 
@@ -82,13 +84,25 @@ def analise(mainBND,contours,shape,linesThres=25):
         crossing = False
         left = right = poly = False
 
+            # an.makeFaces(vertexes)
+
+    # cornerList - wierzchołki obiektu
+    # cornerCNT - wierzchołki na konturach
+    # contours - słownik konturów
+    # longestContour - najdłuzszy kontur
+    # sqrBND - prostokąt obejmujący obiekt w formacie (x,y,width,height) czyli RAMA
+    # left - wierzchołek najbardziej z lewej w ramie
+    # right - wierzchołek najbardziej z prawej w ramie
+    # lines - proste zwrócone przez algorytm hougha
+    # crossing - punkty przeciecia prostych
+
     return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,contours2
 
 
-def find(edge,img=0):
+def findObject(edge,img=0):
     '''
         znajduje kontury, rogi konturu,
-    return (cornerList,mainCNT,cornerCNT,contours_up,longestContour)
+    return (mainBND,mainSqrBnd,contours,objects)
     '''
 
     shape = (edge.shape[0],edge.shape[1])
@@ -109,40 +123,7 @@ def find(edge,img=0):
     # mainSqrBnd zawiera  wielokatna obwiednie bryły
     mainSqrBnd = (x,y,w,h)
 
-    #znajdź elementy obiektu głównego
-    corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
-
-    #znalezienie markera
-    marker = features.findMarker(objects,shape,edge,img)
-
-    if marker is not None:
-        xm,ym,wm,hm = cv2.boundingRect(marker)
-        markerSqrBnd = (xm,ym,wm,hm)
-        # corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(marker,contours.copy(),shape)
-    else:
-        markerSqrBnd = (0,0,0,0)
-
-
-    # an.makeFaces(vertexes)
-
-    # cornerList - wierzchołki obiektu
-    # cornerCNT - wierzchołki na konturach
-    # contours - słownik konturów
-    # longestContour - najdłuzszy kontur
-    # sqrBND - prostokąt obejmujący obiekt w formacie (x,y,width,height) czyli RAMA
-    # left - wierzchołek najbardziej z lewej w ramie
-    # right - wierzchołek najbardziej z prawej w ramie
-    # lines - proste zwrócone przez algorytm hougha
-    # crossing - punkty przeciecia prostych
-
-    # left = 0
-    # right = 0
-    # crossing = 0
-    # poly = 0
-    # innerSegments = 0
-    # innerLines = 0
-
-    return (corners,mainSqrBnd,cnt2,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd)
+    return mainBND,mainSqrBnd,contours,objects
 
 
 def markFeatures(src,stuff):
@@ -309,29 +290,66 @@ def run():
                 # # cv2.imwrite(f,hx)
                 #
                 margin = 0
-                #
+
+                # GÓRNY OBRAZ
+
                 edge_up = edge[:mirror_line[0],:]
                 img_up = img[:mirror_line[0], :]
 
-                edge_down = edge[mirror_line[1]:,:]
-                img_down = img[mirror_line[1]:,:]
+                mainBND,mainSqrBnd,contours,objects = findObject(edge_up,img_up)
 
+                shape = (edge_up.shape[0],edge_up.shape[1])
 
+                #znajdź elementy obiektu głównego
+                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
 
-                stuff_up = find(edge_up,img_up)
+                #znalezienie markera
+                marker_up = features.findMarker(objects,shape,edge_up,img_up)
+
+                # if marker_up[0] is not None:
+                #     xm,ym,wm,hm = cv2.boundingRect(marker_up[0])
+                #     markerSqrBnd = (xm,ym,wm,hm)
+                # else:
+                #     markerSqrBnd = (0,0,0,0)
+
+                stuff_up = (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_up[0])
 
                 img_up = markFeatures(img_up,stuff_up)
 
 
-                f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
-                cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+                # DOLNY OBRAZ
 
+                edge_down = edge[mirror_line[1]:,:]
+                img_down = img[mirror_line[1]:,:]
 
-                # dolny obraz
+                mainBND,mainSqrBnd,contours,objects = findObject(edge_down,img_down)
 
-                stuff_down = find(edge_down,img_down)
+                shape = (edge_down.shape[0],edge_down.shape[1])
+
+                #znajdź elementy obiektu głównego
+                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
+
+                #znalezienie markera
+                marker_down = features.findMarker(objects,shape,edge_down,img_down)
+
+                # if marker_down[0] is not None:
+                #     xm,ym,wm,hm = cv2.boundingRect(marker_down[0])
+                #     markerSqrBnd = (xm,ym,wm,hm)
+                # else:
+                #     markerSqrBnd = (0,0,0,0)
+
+                stuff_down = (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_down[0])
 
                 img_down = markFeatures(img_down,stuff_down)
+
+                # kalibruj kamere
+                ca.calibrate(marker_down,marker_up,gray,mirror_line[1])
+
+
+                #zapisz wyniki
+
+                f = 'img/results/matching/%d/folder_%d_%d_cont2_gora_.png' % (folder,folder,i)
+                cv2.imwrite(f,img_up,[cv2.IMWRITE_PNG_COMPRESSION,0] )
 
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_dol_.png' % (folder,folder,i)
                 cv2.imwrite(f,img_down)
