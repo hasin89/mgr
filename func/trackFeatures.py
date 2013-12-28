@@ -553,7 +553,7 @@ def findMainObject(objectsCNT,shape,img=0):
 
     #srodek obrazu
     yc0 = shape[0]/2
-    xc0 = shape[1]/2
+    xc0 = (shape[1]/4)*3
 
     min_index = -1
     min_cost = shape[0]*shape[1]
@@ -584,6 +584,8 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
      znajduje obiekt markera
     '''
 
+    # w zależności od użytego wzorca (w+1)x (h+1) +4
+    maxCorners = 40
     marker = False
 
     rho = 0.25
@@ -630,7 +632,7 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             cv2.fillConvexPoly(mask,squares,1)
 
 
-            corners = cv2.goodFeaturesToTrack(e,20,0.01,10,corners,mask)
+            corners = cv2.goodFeaturesToTrack(e,maxCorners,0.01,10,corners,mask)
             corners = np.reshape(corners,(-1,2))
 
             # Xmax,Ymax = corners.argmax(0)
@@ -643,6 +645,22 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
 
             points1 = points2 = 0
 
+            # eliminacja wierzchłoków wykrytych na krawedzi obszaru (po prostu źle)
+            border = []
+            for k in range(0,4):
+                border.append(an.getLine(squares[k],squares[((k+1)%4)],0))
+
+            distances = []
+            toDelIndexes = []
+            for i in range(0,corners.__len__()):
+                for k in range(0,4):
+                    dist = an.calcDistFromLine(corners[i],border[k])
+                    if dist<1:
+                        toDelIndexes.append(i)
+                        break
+            corners = np.array( [p for k,p in enumerate(corners) if k not in toDelIndexes] )
+
+            #  pierwsza przekątna
             line = an.getLine(squares[0],squares[2],0)
             mark.drawSegment(v,squares[0],squares[2])
 
@@ -661,8 +679,9 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             B = corners[distances.index(max(distancesTMP))]
             a= (A[0],A[1])
             b= (B[0],B[1])
-            line = an.getLine(squares[1],squares[3],0)
 
+            # druga przekątna
+            line = an.getLine(squares[1],squares[3],0)
             mark.drawSegment(v,squares[1],squares[3])
 
             distances = []
@@ -681,9 +700,11 @@ def findMarker(objectsCNT,shape,edge=0,img=0):
             for x,y in corners:
                 mark.YellowPoint(v,(int(x),int(y)))
                 pass
-
+            # browse.browse(v)
             f = 'img/results/matching/%d/folder_%d_match_%d_%d.png' % (6,16,n,shape[0])
-            if (points1 == points2 == 6):
+
+            # to kryterium ilości wierzchołków w pobliżu przekątnych
+            if (points1 >5 and  points2 > 5):
                 cv2.imwrite(f,v,[cv2.IMWRITE_PNG_COMPRESSION,0] )
                 print 'szachownica'
                 print n

@@ -64,8 +64,12 @@ def points(img,points):
     '''
     na biało
     '''
-    for point in points.itervalues():
-        cv2.circle(img, point ,4,(255,255,255,0),3)
+    if points.__class__.__name__ != 'dict':
+        for point in points:
+            cv2.circle(img, (int(point[0]),int(point[1])) ,4,(255,255,255,0),3)
+    else:
+        for point in points.itervalues():
+            cv2.circle(img, point ,4,(255,255,255,0),3)
 
     return img
 
@@ -110,4 +114,12 @@ def drawPoly(img,poly):
 
 def drawSegment(img,p1,p2):
     cv2.line(img,p1,p2,(255,255,255),4)
+    return img
+
+def drawMain(img,p1,p2):
+    cv2.line(img,p1,p2,(0,0,255),4)
+    return img
+
+def drawMarker(img,p1,p2):
+    cv2.line(img,p1,p2,(255,0,0),4)
     return img

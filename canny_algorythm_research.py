@@ -114,11 +114,15 @@ def findObject(edge,img=0):
 
     for tmpobj in objects:
         for i in range(0,len(tmpobj)-1):
-            mark.drawSegment(img,(tmpobj[i][0][0],tmpobj[i][0][1]) ,(tmpobj[i+1][0][0],tmpobj[i+1][0][1]))
+            # mark.drawSegment(img,(tmpobj[i][0][0],tmpobj[i][0][1]) ,(tmpobj[i+1][0][0],tmpobj[i+1][0][1]))
+            pass
 
 
     # obiekt główny
     mainBND = features.findMainObject(objects,shape,img)
+    for i in range(0,len(mainBND)-1):
+            mark.drawMain(img,(mainBND[i][0][0],mainBND[i][0][1]) ,(mainBND[i+1][0][0],mainBND[i+1][0][1]))
+
     x,y,w,h = cv2.boundingRect(mainBND)
     # mainSqrBnd zawiera  wielokatna obwiednie bryły
     mainSqrBnd = (x,y,w,h)
@@ -250,9 +254,9 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     # list = range(1,16)
-    list = [18]
+    list = [2]
 
-    folder = 6
+    folder = 7
     # print list
     for i in list:
         edge = None
@@ -291,10 +295,29 @@ def run():
                 #
                 margin = 0
 
-                # GÓRNY OBRAZ
+                # pocdział na obrazy górny i dolny
 
                 edge_up = edge[:mirror_line[0],:]
                 img_up = img[:mirror_line[0], :]
+
+                edge_down = edge[mirror_line[1]:,:]
+                img_down = img[mirror_line[1]:,:]
+
+                # wyrównanie wymiarów (tak żeby oba miały ten sam kształt) wg mniejszego
+
+                up_height = img_up.shape[0]
+                down_height = img_down.shape[0]
+                delta = abs(up_height - down_height)
+                if up_height > down_height:
+                    img_up = img_up[delta:,:]
+                    edge_up = edge_up[delta:,:]
+                    pass
+                else:
+                    img_down = img_down[:down_height-delta,:]
+                    edge_down = edge_down[:down_height-delta:,:]
+                    pass
+
+                # GÓRNY OBRAZ
 
                 mainBND,mainSqrBnd,contours,objects = findObject(edge_up,img_up)
 
@@ -319,9 +342,6 @@ def run():
 
                 # DOLNY OBRAZ
 
-                edge_down = edge[mirror_line[1]:,:]
-                img_down = img[mirror_line[1]:,:]
-
                 mainBND,mainSqrBnd,contours,objects = findObject(edge_down,img_down)
 
                 shape = (edge_down.shape[0],edge_down.shape[1])
@@ -343,7 +363,7 @@ def run():
                 img_down = markFeatures(img_down,stuff_down)
 
                 # kalibruj kamere
-                ca.calibrate(marker_down,marker_up,gray,mirror_line[1])
+                ca.calibrate(marker_down,marker_up,gray,mirror_line[1],img,edge_down.shape)
 
 
                 #zapisz wyniki
