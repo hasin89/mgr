@@ -3,3 +3,6 @@
 img/*
 *.png
 *.JPG
+.project
+.pydevproject
+.settings*
