@@ -10,7 +10,6 @@ gray histogram
 
 import cv2
 import numpy as np
-import sys
 
 def gray(img):
     '''
@@ -67,6 +66,7 @@ def length(peri):
     cv2.imshow('hist', h)
     cv2.waitKey(0)
     return
+
 
 def draw(peri):
     u'''

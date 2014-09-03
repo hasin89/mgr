@@ -3,6 +3,7 @@ from cmath import sqrt
 from numpy.lib.function_base import average
 from func import histogram
 from func.analise import getInnerSegments
+from scene import edge
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -35,17 +36,8 @@ def markCounturResult(img,edge):
 
     return vis_filtred
 
-
-def track(img, nr, gauss_kernel=11, gammaFactor=0.45):
-    """
-
-    :param img:
-    :param nr:
-    """
-    edge_filtred,vis = features.canny(img,gauss_kernel,gammaFactor)
-    # edge_filtred,vis = features.adaptiveThreshold(img,gauss_kernel,0.5,-3)
-
-    return edge_filtred
+# default gauss_kernel = 11
+# default gamma factor = 0.45
 
 
 def analise(mainBND,contours,shape,linesThres=25):
@@ -261,13 +253,9 @@ def run():
     for i in list:
         edge = None
         filename = 'img/%d/%d.JPG' % (folder, i)
-        print(filename)
-        imgT = cv2.imread(filename)
-        shape = (round(0.25*imgT.shape[1]),round(0.25*imgT.shape[0]))
-        img = np.empty(shape,dtype='uint8')
-        img = cv2.resize(imgT,img.shape)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        h, w = img.shape[:2]
+        scene = loadImage(filename)
+        
+        
 
         FirstCycleFlag = True
         #0.45
@@ -276,45 +264,36 @@ def run():
         for j in gammas:
             # 11
             for n in [5]:
-                gaussKernel = n
-                gammaFactor = j
+                scene.gauss_kernel = n
+                scene.gamma = j
                 print (n,j)
-
-                edge = track(img, i,gaussKernel,gammaFactor)
+                
+                edge = scene.getEdges()
+                
                 f = 'img/results/matching/%d/folder_%d_%d_edge_.jpg' % (folder,folder, i)
-                cv2.imwrite(f,edge)
+                cv2.imwrite(f,edge.map)
 
-                hy,a,b,mirror_line = countNonZeroRowsY(edge)
+                mirror_line = edge.getMirrorLine()
                 #
                 f = 'img/results/matching/%d/folder_%d_gray.jpg' % (folder,i)
-                cv2.imwrite(f,gray)
-
-                hx,c,d = countNonZeroRowsX(edge)
-                # f = 'img/results/histogram/3_avg/%d_histogram_X.jpg' % (i)
-                # # cv2.imwrite(f,hx)
-                #
-                margin = 0
+                cv2.imwrite(f,scene.gray)
 
                 # pocdział na obrazy górny i dolny
-
-                edge_up = edge[:mirror_line[0],:]
-                img_up = img[:mirror_line[0], :]
-
-                edge_down = edge[mirror_line[1]:,:]
-                img_down = img[mirror_line[1]:,:]
-
+                scene.divide(mirror_line)
+                edge.divide()
+                
                 # wyrównanie wymiarów (tak żeby oba miały ten sam kształt) wg mniejszego
 
-                up_height = img_up.shape[0]
-                down_height = img_down.shape[0]
+                up_height = scene.reflected.height
+                down_height = scene.direct.height
                 delta = abs(up_height - down_height)
                 if up_height > down_height:
-                    img_up = img_up[delta:,:]
-                    edge_up = edge_up[delta:,:]
+                    img_up = scene.reflected[delta:,:]
+                    edge_up = edge.reflected[delta:,:]
                     pass
                 else:
-                    img_down = img_down[:down_height-delta,:]
-                    edge_down = edge_down[:down_height-delta:,:]
+                    img_down = scene.direct[:down_height-delta,:]
+                    edge_down = edge.direct[:down_height-delta:,:]
                     pass
 
                 # GÓRNY OBRAZ
@@ -363,7 +342,7 @@ def run():
                 img_down = markFeatures(img_down,stuff_down)
 
                 # kalibruj kamere
-                ca.calibrate(marker_down,marker_up,gray,mirror_line[1],img,edge_down.shape)
+                ca.calibrate(marker_down,marker_up,scene.getGrayScaleImage(),mirror_line[1],scene.image,edge_down.shape)
 
 
                 #zapisz wyniki
@@ -392,6 +371,16 @@ def run():
 
 
     ch = cv2.waitKey()
+    
+    def loadImage(filename):
+        print(filename)
+        imgT = cv2.imread(filename)
+        shape = (round(0.25*imgT.shape[1]),round(0.25*imgT.shape[0]))
+        imgMap = np.empty(shape,dtype='uint8')
+        imgMap = cv2.resize(imgT,imgMap.shape)
+        from scene.scene import Scene
+        scene = Scene(imgMap)
+        return scene 
 
 
 run()
