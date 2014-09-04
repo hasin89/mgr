@@ -16,8 +16,8 @@ class Scene(object):
     
     
     def __init__(self, image):
-        self.image = image
-        self.height, self.width = self.image.shape[:2]
+        self.view = image
+        self.height, self.width = self.view.shape[:2]
         
         self.reflected = None
         self.direct = None
@@ -34,17 +34,19 @@ class Scene(object):
         
     def getEdges(self):
         
-        edge_filtred, vis = features.canny(self.image, self.gauss_kernel, self.gamma)
-        self.edge_map = edgeMap(self.image, edge_filtred)
+        edge_filtred, vis = features.canny(self.view, self.gauss_kernel, self.gamma)
+        self.edge_map = edgeMap(self.view, edge_filtred)
         
         return self.edge_map
     
     def getGrayScaleImage(self):
-        self.gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        self.gray = cv2.cvtColor(self.view, cv2.COLOR_BGR2GRAY)
         return self.gray
     
     def divide(self, mirror_line=None):
         if mirror_line == None:
             mirror_line = self.mirror_line
-        self.reflected = Scene(self.image[:mirror_line[0], :])
-        self.direct = Scene(self.image[mirror_line[1]:, :])
+        reflected = Scene(self.view[:mirror_line[0], :])
+        direct = Scene(self.view[mirror_line[1]:, :])
+        
+        return reflected, direct
