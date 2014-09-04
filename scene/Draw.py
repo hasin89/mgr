@@ -5,7 +5,6 @@ __author__ = 'tomek'
 # /usr/bin/env python
 
 import cv2
-import browse
 import sys
 import numpy as np
 
