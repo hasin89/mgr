@@ -3,7 +3,7 @@ Created on Sep 4, 2014
 
 @author: Tomasz
 '''
-import func.analise as an
+import func.analise
 
 class Segment(object):
     def __init__(self):
@@ -16,7 +16,7 @@ class Segment(object):
         if len(self.points) == 2:
             p1 = self.points[0]
             p2 = self.points[1]
-            self.length = an.calcLength(p1,p2)
+            self.length = func.analise.calcLength(p1,p2)
         else:
             self.length = 0
 
@@ -29,6 +29,6 @@ class Segment(object):
         if len(self.points) == 2:
             p1 = self.points[0]
             p2 = self.points[1]
-            self.line = an.getLine(p1,p2,0)
+            self.line = func.analise.getLine(p1,p2,0)
         else:
             self.line = (0,0,0)
