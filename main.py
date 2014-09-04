@@ -238,6 +238,16 @@ def countNonZeroRowsX(edge):
     h = histogram.draw(peri[c:d])
     return h,c,d
 
+def loadImage(filename):
+    print(filename)
+    imgT = cv2.imread(filename)
+    shape = (round(0.25*imgT.shape[1]),round(0.25*imgT.shape[0]))
+    imgMap = np.empty(shape,dtype='uint8')
+    imgMap = cv2.resize(imgT,imgMap.shape)
+    from scene.scene import Scene
+    scene = Scene(imgMap)
+    return scene
+
 def run():
 
     nr = 24
@@ -288,25 +298,25 @@ def run():
                 down_height = scene.direct.height
                 delta = abs(up_height - down_height)
                 if up_height > down_height:
-                    img_up = scene.reflected[delta:,:]
+                    img_up = scene.reflected.image[delta:,:]
                     edge_up = edge.reflected[delta:,:]
                     pass
                 else:
-                    img_down = scene.direct[:down_height-delta,:]
+                    img_down = scene.direct.image[:down_height-delta,:]
                     edge_down = edge.direct[:down_height-delta:,:]
                     pass
 
                 # GÓRNY OBRAZ
 
-                mainBND,mainSqrBnd,contours,objects = findObject(edge_up,img_up)
+                mainBND,mainSqrBnd,contours,objects = findObject(edge.reflected,scene.reflected.image)
 
-                shape = (edge_up.shape[0],edge_up.shape[1])
+                shape = (edge.reflected.shape[0],edge.reflected.shape[1])
 
                 #znajdź elementy obiektu głównego
                 corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
 
                 #znalezienie markera
-                marker_up = features.findMarker(objects,shape,edge_up,img_up)
+                marker_up = features.findMarker(objects,shape,edge.reflected,scene.reflected.image)
 
                 # if marker_up[0] is not None:
                 #     xm,ym,wm,hm = cv2.boundingRect(marker_up[0])
@@ -316,7 +326,7 @@ def run():
 
                 stuff_up = (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_up[0])
 
-                img_up = markFeatures(img_up,stuff_up)
+                img_up = markFeatures(scene.reflected.image,stuff_up)
 
 
                 # DOLNY OBRAZ
@@ -372,15 +382,7 @@ def run():
 
     ch = cv2.waitKey()
     
-    def loadImage(filename):
-        print(filename)
-        imgT = cv2.imread(filename)
-        shape = (round(0.25*imgT.shape[1]),round(0.25*imgT.shape[0]))
-        imgMap = np.empty(shape,dtype='uint8')
-        imgMap = cv2.resize(imgT,imgMap.shape)
-        from scene.scene import Scene
-        scene = Scene(imgMap)
-        return scene 
+ 
 
 
 run()
