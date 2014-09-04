@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from math import sqrt
-from spottedObject import spottedObject
+from math import cos
+from collections import Counter
+from numpy.core.defchararray import array
+from func import browse
+from func import trackFeatures
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -14,225 +18,12 @@ import numpy as np
 import func.analise as an
 
 
-class ContourDetector():
+class CornerDetector():
     
     
-    def __init__(self,edge):
-        self.edge = edge
+    def __init__(self,contours):
+        self.contours = contours
         self.shape = self.edge.shape
-    
-    
-    #
-    # 
-    # Contour detection
-    #
-    #
-    
-    def findContours(self):
-        '''
-        łaczy punkty w kontur
-        '''
-    
-        contours = {0:[]}
-        i = 0
-        flag = True
-    
-        edge = self.edge.copy()
-        nonzeros = np.nonzero(edge)
-        pointX = nonzeros[1][0]
-        pointY = nonzeros[0][0]
-        contours[0].append((pointY,pointX))
-    
-        while flag == True:
-            neibour = self.getNeibours(pointX,pointY)
-            #jeżeli znaleziono sąsiada tododaj go do konturu
-            if neibour != False:
-                edge[pointY,pointX] = 0
-                pointX = neibour[0]
-                pointY = neibour[1]
-                contours[i].append((pointY,pointX))
-    
-            #jeżeli nie znaleziono sąsiada
-            else:
-                #poszukaj w otoczeniu
-                edge[pointY,pointX] = 0
-                near, dist = self.searchNearBy(edge,pointX,pointY)
-                # near = np.asarray([])
-                # dist = -1
-    
-                #jezeli znaleziono punkt w otoczeniu
-                if near.size>0 :
-                    pointX = near[0]
-                    pointY = near[1]
-    
-                #jezeli nie znaleziono w otoczeniu żadnego punktu to znajdź pierwszy niezerowy
-                else:
-                    nonzeros = np.nonzero(edge)
-                    if nonzeros[0].size > 0:
-                        pointX = nonzeros[1][0]
-                        pointY = nonzeros[0][0]
-                        # cv2.circle(nimg, (pointX,pointY),10,(255,255,255),1)
-                        # nimg[pointY,pointX] = (255,0,0)
-    
-                    # jeżeli nie ma żadnych niezerowych to zakończ algorytm szukania krawędzi
-                    else:
-                        flag = False
-    
-                # jeżeli punktu nie był w otoczeniu w odległości 5 to znaczy że to nowy kontur
-                if dist != 5:
-                    i+=1
-                    # jeżeli to nie koniec algorytmu to zacznij nową krawędź
-                    if flag != False:
-                        contours[i]=[]
-    
-                # jeżeli to nie koniec algorytmu to dodaj punkt znaleziony dowolną meodą do bierzacego konturu
-                if flag != False:
-                    contours[i].append((pointY,pointX))
-    
-        # sklejenie konturow ktore powinny byc jednak razem
-        neibours = []
-        neibours = self.getContourNeibours(contours,contours[0][0])
-        if len(neibours)>0:
-            for n in neibours:
-                if n[0] != 0:
-                    contours[0].extend(contours[n[0]])
-                    contours[n[0]] = []
-    
-        print "ilosc"
-        print len(contours)
-    
-        return contours
-    
-    
-    def getNeibours(self,x,y):
-    
-        yMax,xMax = self.shape
-    
-        check = {}
-    
-        check['a'] = (x+1,y)
-        check['c'] = (x-1,y)
-        check['e'] = (x+1,y+1)
-        check['g'] = (x-1,y-1)
-    
-        check['b'] = (x, y+1)
-        check['d'] = (x,y-1)
-        check['f'] = (x-1,y+1)
-        check['h'] = (x+1,y-1)
-    
-    
-        if x == 0:
-            del check['c']
-            del check['f']
-            del check['g']
-    
-        elif x == xMax-1:
-            del check['a']
-            del check['e']
-            del check['h']
-    
-        if y == 0:
-            del check['d']
-            if 'h' in check.keys():
-                del check['h']
-            if 'g' in check.keys():
-                del check['g']
-    
-        elif y == yMax-1:
-            del check['b']
-            if 'e' in check.keys():
-                del check['e']
-            if 'f' in check.keys():
-                del check['f']
-    
-        for value in check.itervalues():
-            if self.edge[value[1],value[0]] == 255:
-                return (value[0],value[1])
-    
-        return False
-    
-    
-    def getContourNeibours(self,contours,(x,y)):
-    
-    
-        check = {}
-    
-        check['a'] = (x+1,y)
-        check['c'] = (x-1,y)
-        check['e'] = (x+1,y+1)
-        check['g'] = (x-1,y-1)
-    
-        check['b'] = (x, y+1)
-        check['d'] = (x,y-1)
-        check['f'] = (x-1,y+1)
-        check['h'] = (x+1,y-1)
-    
-        neibours = []
-        for k,v in contours.items():
-            for point in check.itervalues():
-                try:
-                    index = v.index(point)
-                except ValueError:
-                    index = -1
-                if index != -1:
-                    neibours.append((k,index))
-    
-        return neibours
-    
-    
-    def searchNearBy(self,x,y):
-        print 'search'
-        sp = self.edge.T.shape
-    
-        maskSizes = range(5,19,2)
-        for i in maskSizes:
-            mask = self.generateMask(i)
-            points = np.asarray((x,y))+mask
-    
-            #filtowanie z poza granic
-            xx = points[:,0]
-            yy =points[:,1]
-            XoverflowIndex = np.where(xx>sp[0]-1)
-            YoverflowIndex = np.where(yy>sp[1]-1)
-            wrongIndexes = np.union1d(XoverflowIndex[0],YoverflowIndex[0])
-            points= np.delete(points,wrongIndexes,0)
-    
-            p = [self.edge[points[k][1],points[k][0]] for k in range(len(points))]
-            non = np.nonzero(p)[0]
-            if non.size>0:
-                no = np.nonzero(p)[0][0]
-                return points[no] , i
-    
-        return np.asarray([]),False
-    
-    
-    def generateMask(self,maskSize):
-    
-        n = (maskSize-1)/2
-        mask = []
-        x=n
-        y=n-1
-        while x<n+1:
-            while y<n:
-                while x>-n:
-                    while y>-n:
-                        mask.append((x,y))
-                        y-=1
-                    mask.append((x,y))
-                    x-=1
-                mask.append((x,y))
-                y+=1
-            mask.append((x,y))
-            x+=1
-    
-        return mask
-    
-    #
-    # 
-    # Corner detection
-    #
-    #   
-
     
     
     def findCornersOnContour(self,contour,size):
@@ -249,26 +40,6 @@ class ContourDetector():
             return indexes
         else:
             return []
-    
-    
-    def filterContours(self,contours,boundaries):
-        '''
-        pozbywa sie konturów z poza podanego obszaru
-    
-        contours - kontury - {0:[(a,b),(c,d)],1:[(e,f),(g,h),(j,k)]}
-        boundaries - obszar graniczy - [[[1698  345]] \n\n [[1698  972]]]
-    
-        '''
-        for key,c in contours.iteritems():
-            if len(c)>0:
-                isinside = cv2.pointPolygonTest(boundaries,(c[0][1],c[0][0]),0)
-            else:
-                isinside = 0
-            if isinside != 1:
-                contours[key] = []
-            else:
-                pass
-        return contours
     
       
     def eliminateSimilarCorners(self,corners,mainCnt,shape,border=35):
@@ -357,7 +128,8 @@ class ContourDetector():
         return cornersInside
     
     
-    def findCorners(self,contours):
+    def findCorners(self):
+        contours = self.contours
     
         # lista z podziełem na kontury
         cornerCNT = {}
@@ -463,8 +235,6 @@ class ContourDetector():
                 min_cost = cost.real
                 min_index = n
         mainCNT = objectsCNT[min_index]
-        
-        mainObject = spottedObject(mainCNT)
     
         return mainCNT
     
