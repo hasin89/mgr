@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from cmath import sqrt
 from numpy.lib.function_base import average
 from func import histogram
 from func.analise import getInnerSegments
@@ -91,35 +90,7 @@ def analise(mainBND,contours,shape,linesThres=25):
     return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,contours2
 
 
-def findObject(edge,img=0):
-    '''
-        znajduje kontury, rogi konturu,
-    return (mainBND,mainSqrBnd,contours,objects)
-    '''
 
-    shape = (edge.shape[0],edge.shape[1])
-
-    contours = features.findContours(edge)
-
-    # objects zawiera obiekty znalezione na podstawie konturu
-    objects = features.findObjects(shape,contours)
-
-    for tmpobj in objects:
-        for i in range(0,len(tmpobj)-1):
-            # mark.drawSegment(img,(tmpobj[i][0][0],tmpobj[i][0][1]) ,(tmpobj[i+1][0][0],tmpobj[i+1][0][1]))
-            pass
-
-
-    # obiekt główny
-    mainBND = features.findMainObject(objects,shape,img)
-    for i in range(0,len(mainBND)-1):
-            mark.drawMain(img,(mainBND[i][0][0],mainBND[i][0][1]) ,(mainBND[i+1][0][0],mainBND[i+1][0][1]))
-
-    x,y,w,h = cv2.boundingRect(mainBND)
-    # mainSqrBnd zawiera  wielokatna obwiednie bryły
-    mainSqrBnd = (x,y,w,h)
-
-    return mainBND,mainSqrBnd,contours,objects
 
 
 def markFeatures(src,stuff):
@@ -264,8 +235,6 @@ def run():
         edge = None
         filename = 'img/%d/%d.JPG' % (folder, i)
         scene = loadImage(filename)
-        
-        
 
         FirstCycleFlag = True
         #0.45
@@ -289,34 +258,34 @@ def run():
                 cv2.imwrite(f,scene.gray)
 
                 # pocdział na obrazy górny i dolny
-                scene.divide(mirror_line)
-                edge.divide()
+                view_reflected, view_direct = scene.divide(mirror_line)
+                reflected, direct = edge.divide(mirror_line)
                 
                 # wyrównanie wymiarów (tak żeby oba miały ten sam kształt) wg mniejszego
 
-                up_height = scene.reflected.height
-                down_height = scene.direct.height
+                up_height = view_reflected.height
+                down_height = view_direct.height
                 delta = abs(up_height - down_height)
                 if up_height > down_height:
-                    img_up = scene.reflected.image[delta:,:]
-                    edge_up = edge.reflected[delta:,:]
+                    img_up = view_reflected.view[delta:,:]
+                    edge_up = reflected.map[delta:,:]
                     pass
                 else:
-                    img_down = scene.direct.image[:down_height-delta,:]
-                    edge_down = edge.direct[:down_height-delta:,:]
+                    img_down = view_direct.view[:down_height-delta,:]
+                    edge_down = direct.map[:down_height-delta:,:]
                     pass
 
                 # GÓRNY OBRAZ
+                reflected.findObject()
+                #mainBND,mainSqrBnd,contours,objects = findObject(edge.reflected.map,scene.reflected.view)
 
-                mainBND,mainSqrBnd,contours,objects = findObject(edge.reflected,scene.reflected.image)
-
-                shape = (edge.reflected.shape[0],edge.reflected.shape[1])
+                shape = (reflected.shape[0],reflected.shape[1])
 
                 #znajdź elementy obiektu głównego
-                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
+                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(reflected.mainObject.CNT,reflected.contours.copy(),shape)
 
                 #znalezienie markera
-                marker_up = features.findMarker(objects,shape,edge.reflected,scene.reflected.image)
+                marker_up = features.findMarker(reflected.objects,shape,reflected.map,reflected.view)
 
                 # if marker_up[0] is not None:
                 #     xm,ym,wm,hm = cv2.boundingRect(marker_up[0])
@@ -324,22 +293,22 @@ def run():
                 # else:
                 #     markerSqrBnd = (0,0,0,0)
 
-                stuff_up = (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_up[0])
+                stuff_up = (corners,reflected.mainObject.sqrBnd,reflected.contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_up[0])
 
-                img_up = markFeatures(scene.reflected.image,stuff_up)
+                img_up = markFeatures(reflected.view,stuff_up)
 
 
                 # DOLNY OBRAZ
-
-                mainBND,mainSqrBnd,contours,objects = findObject(edge_down,img_down)
+                
+                direct.findObject()
 
                 shape = (edge_down.shape[0],edge_down.shape[1])
 
                 #znajdź elementy obiektu głównego
-                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(mainBND,contours.copy(),shape)
+                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(direct.mainObject.CNT,direct.contours.copy(),shape)
 
                 #znalezienie markera
-                marker_down = features.findMarker(objects,shape,edge_down,img_down)
+                marker_down = features.findMarker(direct.objects,shape,edge_down,img_down)
 
                 # if marker_down[0] is not None:
                 #     xm,ym,wm,hm = cv2.boundingRect(marker_down[0])
@@ -347,12 +316,12 @@ def run():
                 # else:
                 #     markerSqrBnd = (0,0,0,0)
 
-                stuff_down = (corners,mainSqrBnd,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_down[0])
+                stuff_down = (corners,direct.mainObject.sqrBnd,direct.contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_down[0])
 
                 img_down = markFeatures(img_down,stuff_down)
 
                 # kalibruj kamere
-                ca.calibrate(marker_down,marker_up,scene.getGrayScaleImage(),mirror_line[1],scene.image,edge_down.shape)
+                ca.calibrate(marker_down,marker_up,scene.getGrayScaleImage(),mirror_line[1],scene.view,edge_down.shape)
 
 
                 #zapisz wyniki
