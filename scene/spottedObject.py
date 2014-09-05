@@ -28,5 +28,9 @@ class spottedObject(object):
 
     
     def draw(self,canvas,color):
+        """
+        
+        """
         for i in range(0,len(self.CNT)-1):
-            Draw.Segment(canvas,self.points[i] ,self.points[i+1])
+            Draw.Segment(canvas,(self.CNT[i][0][0],self.CNT[i][0][1]) ,(self.CNT[i+1][0][0],self.CNT[i+1][0][1]),color)
+            print str((self.CNT[i][0][0],self.CNT[i][0][1]))

@@ -44,7 +44,7 @@ class ContourDetector():
         contours[0].append((pointY,pointX))
     
         while flag == True:
-            neibour = self.getNeibours(pointX,pointY)
+            neibour = self.getNeibours(edge,pointX,pointY)
             #jeżeli znaleziono sąsiada tododaj go do konturu
             if neibour != False:
                 edge[pointY,pointX] = 0
@@ -104,7 +104,7 @@ class ContourDetector():
         return contours
     
     
-    def getNeibours(self,x,y):
+    def getNeibours(self,edge,x,y):
     
         yMax,xMax = self.shape
     
@@ -146,7 +146,7 @@ class ContourDetector():
                 del check['f']
     
         for value in check.itervalues():
-            if self.edge[value[1],value[0]] == 255:
+            if edge[value[1],value[0]] == 255:
                 return (value[0],value[1])
     
         return False
@@ -180,9 +180,9 @@ class ContourDetector():
         return neibours
     
     
-    def searchNearBy(self,x,y):
+    def searchNearBy(self,edge,x,y):
         print 'search'
-        sp = self.edge.T.shape
+        sp = edge.T.shape
     
         maskSizes = range(5,19,2)
         for i in maskSizes:
@@ -197,7 +197,7 @@ class ContourDetector():
             wrongIndexes = np.union1d(XoverflowIndex[0],YoverflowIndex[0])
             points= np.delete(points,wrongIndexes,0)
     
-            p = [self.edge[points[k][1],points[k][0]] for k in range(len(points))]
+            p = [edge[points[k][1],points[k][0]] for k in range(len(points))]
             non = np.nonzero(p)[0]
             if non.size>0:
                 no = np.nonzero(p)[0][0]
