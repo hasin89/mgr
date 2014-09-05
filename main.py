@@ -321,7 +321,7 @@ def run():
                 img_down = markFeatures(img_down,stuff_down)
 
                 # kalibruj kamere
-                ca.calibrate(marker_down,marker_up,scene.getGrayScaleImage(),mirror_line[1],scene.view,edge_down.shape)
+                ca.calibrate(marker_down,marker_up,scene.getGrayScaleImage(),mirror_line[1],scene.view,direct.shape)
 
 
                 #zapisz wyniki
@@ -332,21 +332,7 @@ def run():
                 f = 'img/results/matching/%d/folder_%d_%d_cont2_dol_.png' % (folder,folder,i)
                 cv2.imwrite(f,img_down)
 
-                # im = np.append(img_up,img_down,0)
-                #
-                # height = img_up.shape[0]
-                # l_d = [l for l in stuff_down[5]]
-                # r_d = [l for l in stuff_down[6]]
 
-                # left_down = (l_d[0],l_d[1]+height)
-                # right_down = (r_d[0],r_d[1]+height)
-                #
-                #
-                # cv2.line(im,stuff_up[5],left_down,(255,255,0),2)
-                # cv2.line(im,stuff_up[6],right_down,(255,255,0),2)
-
-                # f = 'img/results/contours/parowanie/folder_%d_%d_cont2_all_.png' % (folder,i)
-                # cv2.imwrite(f,im)
 
 
     ch = cv2.waitKey()
