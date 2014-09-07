@@ -1,0 +1,3 @@
+gamma = 0.45
+threshold = 140
+C = -3

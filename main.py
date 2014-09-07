@@ -278,6 +278,8 @@ def run():
                 # GÓRNY OBRAZ
                 reflected.findObject()
                 #mainBND,mainSqrBnd,contours,objects = findObject(edge.reflected.map,scene.reflected.view)
+                myObject = reflected.mainObject
+                myObject.markOnCanvas(reflected.view,(255,0,0))
 
                 shape = (reflected.shape[0],reflected.shape[1])
 

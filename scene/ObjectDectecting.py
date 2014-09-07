@@ -90,7 +90,9 @@ class ObjectDetector():
                 min_cost = cost.real
                 min_index = n
         mainCNT = objectsCNT[min_index]
+        
         mainObject = spottedObject(mainCNT)
+        mainObject.setContours(self.contours)
     
         return mainObject
     
