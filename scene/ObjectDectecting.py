@@ -91,8 +91,9 @@ class ObjectDetector():
                 min_index = n
         mainCNT = objectsCNT[min_index]
         
-        mainObject = spottedObject(mainCNT)
-        mainObject.setContours(self.contours)
+        #with contours set
+        mainObject = spottedObject(mainCNT,self.shape,self.contours)
+        #mainObject.setContours(self.contours)
     
         return mainObject
     

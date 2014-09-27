@@ -10,6 +10,7 @@ from func import histogram
 import func.trackFeatures as features
 import Draw
 from CornerDectecting import CornerDetector
+from LineDectecting import LineDetector
 
 class spottedObject(object):
     u'''
@@ -17,17 +18,24 @@ class spottedObject(object):
     '''
 
 
-    def __init__(self,CNT):
+    def __init__(self,CNT,shape,contours={}):
         '''
         Constructor
         '''
+        
+        # narożniki konturu
         self.CNT = CNT
+        
+        # dane do rysowania prostokąta
         x,y,w,h = cv2.boundingRect(self.CNT)
+        
+        self.shape = shape
         
         # SqrBnd zawiera  wielokatna obwiednie bryły ? a nie prostokątną?
         self.sqrBnd = (x,y,w,h)
-        self.contours = None
+        self.contours = self.setContours(contours)
         self.corners = None
+        self.lines = None
 
     
     def markOnCanvas(self,canvas,color):
@@ -67,7 +75,19 @@ class spottedObject(object):
     def getCorners(self):
         cd = CornerDetector(self.contours)
         corners = cd.findCorners()
+        corners = cd.eliminateSimilarCorners(corners, self.CNT, self.shape, border=35)
         self.corners = corners
-        pass
         
+        return self.corners
+    
+    def getLines(self):
+        
+        ld = LineDetector(self.contours,self.shape)
+        ld.treshhold = 25
+        lines = ld.findLines()
+        self.lines = lines
+        
+        return self.lines
+    
+    def getStructure(self):
         

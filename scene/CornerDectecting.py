@@ -153,7 +153,7 @@ class CornerDetector():
                 # dodaj do listy bez wskazania konturu
                 cornerList.append((x,y))
     
-            # usunięcie podobnych punktów na konturze TODO: whtf ? czemu zakomentowane?
+            # usunięcie podobnych punktów na konturze TODO: whtf ? czemu zakomentowane? bo jest późnej wywołane dla wszystkich zbiorczo w kontekście głównego konturu
             # cornerCNT[cindex] = eliminateSimilarCorners(cornerCNT[cindex],nimg,border=35)
     
         #return cornerCNT,longestContour,cornerList
