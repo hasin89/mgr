@@ -38,64 +38,22 @@ def markCounturResult(img,edge):
 # default gamma factor = 0.45
 
 
-def analise(mainBND,contours,shape,linesThres=25):
-
-    # to jest usuwanie konturow nie zwiazanych z obiektem glownym
-    contours2 = features.filterContours(contours,mainBND)
-
-    #wykrycie wierzchołków związanych z konturem
-    cornersCNT,longestContour, corners = features.findCorners(shape,contours2)
-
-    #wykrycie lini Hougha na podstawie najdłuższego konturu
-    lines = features.findLines(longestContour,shape,linesThres)
-
-    #lista wierzchołkow zwiazanych z bryła i zredukowanych
-    corners = features.eliminateSimilarCorners(corners,mainBND,shape)
-    # av
-
-    if lines.__class__.__name__ == 'list':
-        crossing,poly,vertexes = an.getCrossings(lines,shape,mainBND)
-
-    # wytypowanie wierzchołków najbardziej lewego i prawego
-    # corners = np.asarray(cornerObj)
-    # left,right = an.getMostLeftAndRightCorner(np.asarray(corners),shape)
-        left,right = an.getMostLeftAndRightCorner(np.asarray(crossing),shape)
-
-        an.tryMatch(crossing,left,right)
-
-        lines, innerLines = features.findInnerLines(contours,longestContour,shape,lines)
-
-        innerSegments = an.getInnerSegments(innerLines,shape,poly)
-
-        an.addSegmentsToStructure(innerSegments,vertexes)
-    else:
-        innerLines = False
-        innerSegments = False
-        crossing = False
-        left = right = poly = False
-
-            # an.makeFaces(vertexes)
-
-    # cornerList - wierzchołki obiektu
-    # cornerCNT - wierzchołki na konturach
-    # contours - słownik konturów
-    # longestContour - najdłuzszy kontur
-    # sqrBND - prostokąt obejmujący obiekt w formacie (x,y,width,height) czyli RAMA
-    # left - wierzchołek najbardziej z lewej w ramie
-    # right - wierzchołek najbardziej z prawej w ramie
-    # lines - proste zwrócone przez algorytm hougha
-    # crossing - punkty przeciecia prostych
-
-    return corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,contours2
-
-
-
-
-
 def markFeatures(src,stuff):
 
-    (cornerList,mainBND,contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,markerSqrBnd) = stuff
-
+    (myObject,markerSqrBnd) = stuff
+    cornerList = myObject.corners
+    mainBND = myObject.sqrBnd
+    contours = myObject.contours
+    longestContour = myObject.longestContour
+    left = myObject.left
+    rigth = myObject.right
+    lines = myObject.lines
+    crossing = myObject.crossing
+    poly = myObject.poly
+    innerSegments = myObject.innerSegments
+    innerLines = myObject.innerLines
+    
+    
     img = src.copy()
     # img[:][:] = (0,0,0)
 
@@ -283,7 +241,8 @@ def run():
                 shape = (reflected.shape[0],reflected.shape[1])
 
                 #znajdź elementy obiektu głównego
-                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(reflected.mainObject.CNT,reflected.contours.copy(),shape)
+                myObject.getStructure()
+                #corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(reflected.mainObject.CNT,reflected.contours.copy(),shape)
 
                 #znalezienie markera
                 marker_up = features.findMarker(reflected.objects,shape,reflected.map,reflected.view)
@@ -294,31 +253,37 @@ def run():
                 # else:
                 #     markerSqrBnd = (0,0,0,0)
 
-                stuff_up = (corners,reflected.mainObject.sqrBnd,reflected.contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_up[0])
-
+                #stuff_up = (myObject.corners,reflected.mainObject.sqrBnd,reflected.contours,myObject.longestContour,myObject.left,myObject.right,myObject.lines,myObject.crossing,myObject.poly,myObject.innerSegments,myObject.innerLines,marker_up[0])
+                stuff_up = (myObject,marker_up[0])
                 img_up = markFeatures(reflected.view,stuff_up)
 
 
                 # DOLNY OBRAZ
                 
                 direct.findObject()
+                directObject = direct.mainObject
+                #directObject.markOnCanvas(direct.view,(255,0,0))
 
                 shape = (edge_down.shape[0],edge_down.shape[1])
 
                 #znajdź elementy obiektu głównego
-                corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(direct.mainObject.CNT,direct.contours.copy(),shape)
-
+#                 corners,longestContour,lines,left,right,crossing,poly,innerSegments,innerLines,cnt2 = analise(direct.mainObject.CNT,direct.contours.copy(),shape)
+                
+                #znajdź elementy obiektu głównego
+                directObject.getStructure()
+                
                 #znalezienie markera
                 marker_down = features.findMarker(direct.objects,shape,edge_down,img_down)
-
+                
                 # if marker_down[0] is not None:
                 #     xm,ym,wm,hm = cv2.boundingRect(marker_down[0])
                 #     markerSqrBnd = (xm,ym,wm,hm)
                 # else:
                 #     markerSqrBnd = (0,0,0,0)
 
-                stuff_down = (corners,direct.mainObject.sqrBnd,direct.contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_down[0])
-
+#                 stuff_down = (corners,direct.mainObject.sqrBnd,direct.contours,longestContour,left,right,lines,crossing,poly,innerSegments,innerLines,marker_down[0])
+                stuff_down = (directObject,marker_down[0])
+                
                 img_down = markFeatures(img_down,stuff_down)
 
                 # kalibruj kamere
@@ -334,11 +299,7 @@ def run():
                 cv2.imwrite(f,img_down)
 
 
-
-
     ch = cv2.waitKey()
     
- 
-
-
+    
 run()

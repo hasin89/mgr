@@ -24,7 +24,7 @@ class LineDetector():
         
         self.shape = shape
         
-        self.treshhold = 25 #125
+        self.threshold = 25 #125
         self.theta = 0.025 
         self.rho = 1
     
@@ -74,7 +74,7 @@ class LineDetector():
         
         for c in otherContours.itervalues():
             if len(c)>0:
-                self.treshold = 50
+                self.threshold = 50
                 ol = self.findLines(c)
                 if ol != False:
                     otherLines.append(ol[0])

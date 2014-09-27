@@ -39,8 +39,17 @@ class spottedObject(object):
         self.corners = None
         self.lines = None
         
+        self.ld = LineDetector(self.shape)
+        
         self.longestContour = None
-        self.ld = LineDetector(self.shape) 
+        self.innerSegments = None
+        self.innerLines = None
+        self.poly = None
+        self.left = None
+        self.right = None
+        self.crossing = None
+        
+         
 
     
     def markOnCanvas(self,canvas,color):
@@ -79,9 +88,9 @@ class spottedObject(object):
     
     
     def getCorners(self):
-        cd = CornerDetector(self.contours)
+        cd = CornerDetector(self.shape,self.contours)
         corners = cd.findCorners()
-        corners = cd.eliminateSimilarCorners(corners, self.CNT, self.shape, border=35)
+        corners = cd.eliminateSimilarCorners(corners, self.CNT, 35)
         self.corners = corners
         
         return self.corners
@@ -91,7 +100,7 @@ class spottedObject(object):
         longestContour = ContourDectecting.getLongest(self.contours)
         self.longestContour = longestContour
         
-        self.ld.treshhold = 25
+        self.ld.threshhold = 25
         lines = self.ld.findLines(longestContour)
         self.lines = lines
         
@@ -99,6 +108,10 @@ class spottedObject(object):
     
     
     def getStructure(self):
+        
+        self.getCorners()
+        self.getLines()
+        
         sb = StructureBuilder(self.shape)
         
         crossing, poly, vertexes  = sb.getAllCrossings(self.lines, self.CNT)
@@ -115,5 +128,12 @@ class spottedObject(object):
         sb.addSegmentsToStructure(innerSegments,vertexes)
         
         print vertexes
+        
+        self.right = right
+        self.left = left
+        self.innerLines = innerLines
+        self.innerSegments = innerSegments
+        self.poly = poly
+        self.crossing = crossing
         
         

@@ -21,9 +21,9 @@ import func.analise as an
 class CornerDetector():
     
     
-    def __init__(self,contours):
+    def __init__(self,shape,contours):
         self.contours = contours
-        self.shape = self.edge.shape
+        self.shape = shape
      
     #
     # podstawowa analiza obrazu
@@ -45,11 +45,11 @@ class CornerDetector():
             return []
     
       
-    def eliminateSimilarCorners(self,corners,mainCnt,shape,border=35):
+    def eliminateSimilarCorners(self,corners,mainCnt,border=35):
         '''
         eliminuje wierzchołki ktore prawdopodobnie sa blisko siebie
         '''
-    
+        shape = self.shape
         # płótno pod wierzchołki
         nimg = np.zeros(shape,dtype='uint8')
         nimg[:][:] = 0

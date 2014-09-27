@@ -205,6 +205,7 @@ class StructureBuilder(object):
                     vertexes[p].neibours[s.line] = s.points[0]
                 else:
                     vertexes[p].neibours[s.line] = s.points[1]
+        return vertexes
     
     
     def makeFaces(self,vertexesORG):
