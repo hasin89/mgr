@@ -90,4 +90,5 @@ class spottedObject(object):
         return self.lines
     
     def getStructure(self):
+        pass
         

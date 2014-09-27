@@ -24,7 +24,10 @@ class CornerDetector():
     def __init__(self,contours):
         self.contours = contours
         self.shape = self.edge.shape
-       
+     
+    #
+    # podstawowa analiza obrazu
+    #  
     
     def findCornersOnContour(self,contour,size):
     
@@ -159,3 +162,5 @@ class CornerDetector():
         #return cornerCNT,longestContour,cornerList
         return cornerList
     
+    
+    #
