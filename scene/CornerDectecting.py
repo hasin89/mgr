@@ -137,17 +137,10 @@ class CornerDetector():
         #lista bez podziału na kontury
         cornerList = []
     
-        longestContour = []
-    
         #dla każdego znalezionego konturu
         for cindex in range(len(contours)):
             cornerCNT[cindex] = []
-    
-            # szukanie najdłuższego - obiedni
-            cnt_len = len(contours[cindex])
-            if cnt_len>len(longestContour):
-                longestContour = contours[cindex]
-    
+         
             indexes = self.findCornersOnContour(contours[cindex],16)
     
             # zaznacz wszsytkie znalezione wierzchołki
