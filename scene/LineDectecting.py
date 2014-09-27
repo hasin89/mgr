@@ -17,20 +17,19 @@ import numpy as np
 class LineDetector():
     
     
-    def __init__(self,contour,shape):
+    def __init__(self,shape):
         """
-            contour - kiedys byl najdluzszym
             shape - obszar na ktorym znajduje sie kontur
         """
-        self.contour = contour
-        self.shape = self.shape
+        
+        self.shape = shape
         
         self.treshhold = 25 #125
         self.theta = 0.025 
         self.rho = 1
     
     
-    def findLines(self):
+    def findLines(self,contour):
         '''
         zwraca linie Hougha na podstawie podanego konturu
         
@@ -39,7 +38,7 @@ class LineDetector():
         
         return lines - linie
         '''
-        longestContour = self.contour
+        longestContour = contour
         
         tmpbinary = np.zeros(self.shape,dtype='uint8')
         tmpbinary[:][:] = 0
@@ -58,6 +57,32 @@ class LineDetector():
         else:
             lines = False
         return lines
+    
+    
+    def findInnerLines(self,contours,longestContour,lines):
+        '''
+         szuka krawędzi wewnątrz konturu na podstawie konturu nienajdłuższego
+         eliminuje te podobne do najdłuższego
+    
+         return lines, otherlines
+        '''
+        #szukanie krawędzi wewnętrznych
+        index = contours.values().index(longestContour)
+        otherContours = contours.copy()
+        otherContours[index] = []
+        otherLines = []
+        
+        for c in otherContours.itervalues():
+            if len(c)>0:
+                self.treshold = 50
+                ol = self.findLines(c)
+                if ol != False:
+                    otherLines.append(ol[0])
+        otherLines = self.eliminateSimilarLines(np.asarray(otherLines))
+        lines,otherLines = self.eliminateRedundantToMainLines(lines,otherLines)
+    
+        return lines, otherLines
+    
     
     def eliminateSimilarLines(self,linesNP):
         """
@@ -141,4 +166,19 @@ class LineDetector():
         lines = finalLines.values()
     
         return lines
-    
+
+
+    def eliminateRedundantToMainLines(self,mainLines,otherLines):
+        '''
+        usuwa linie podobne do konturu głownego
+        return mainLines, otherlines
+        '''
+        for L in mainLines:
+            for i,line in enumerate(otherLines):
+                if (line[0] != L[0]) and (line[1] != L[1]):
+                    x = abs(L[1]-line[1])
+                    value = cos(x)
+                    if value>0.95:
+                        if abs(L[0]-line[0]) < 100:
+                            del otherLines[i]
+        return mainLines,otherLines

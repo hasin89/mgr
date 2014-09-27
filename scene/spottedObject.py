@@ -5,12 +5,14 @@ Created on Sep 3, 2014
 @author: Tomasz
 '''
 import cv2
-import numpy as np
+
 from func import histogram
-import func.trackFeatures as features
+from structureBuilder import StructureBuilder
 import Draw
 from CornerDectecting import CornerDetector
 from LineDectecting import LineDetector
+import ContourDectecting
+import numpy as np
 
 class spottedObject(object):
     u'''
@@ -36,6 +38,9 @@ class spottedObject(object):
         self.contours = self.setContours(contours)
         self.corners = None
         self.lines = None
+        
+        self.longestContour = None
+        self.ld = LineDetector(self.shape) 
 
     
     def markOnCanvas(self,canvas,color):
@@ -45,6 +50,7 @@ class spottedObject(object):
         for i in range(0,len(self.CNT)-1):
             Draw.Segment(canvas,(self.CNT[i][0][0],self.CNT[i][0][1]) ,(self.CNT[i+1][0][0],self.CNT[i+1][0][1]),color)
             print str((self.CNT[i][0][0],self.CNT[i][0][1]))
+          
             
     def setContours(self,contours):
         """
@@ -80,15 +86,34 @@ class spottedObject(object):
         
         return self.corners
     
+    
     def getLines(self):
+        longestContour = ContourDectecting.getLongest(self.contours)
+        self.longestContour = longestContour
         
-        ld = LineDetector(self.contours,self.shape)
-        ld.treshhold = 25
-        lines = ld.findLines()
+        self.ld.treshhold = 25
+        lines = self.ld.findLines(longestContour)
         self.lines = lines
         
         return self.lines
     
+    
     def getStructure(self):
-        pass
+        sb = StructureBuilder(self.shape)
+        
+        crossing, poly, vertexes  = sb.getAllCrossings(self.lines, self.CNT)
+        
+        left,right = sb.getMostLeftAndRightCorner(np.asarray(crossing))
+        sb.tryMatch(crossing,left,right)
+        
+        self.lines, innerLines = self.ld.findInnerLines(self.contours,self.longestContour,self.lines)
+
+        innerSegments = sb.getInnerSegments(innerLines,poly)
+
+        print vertexes
+        
+        sb.addSegmentsToStructure(innerSegments,vertexes)
+        
+        print vertexes
+        
         

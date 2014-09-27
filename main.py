@@ -22,7 +22,6 @@ import func.browse as browse
 import numpy as np
 import func.trackFeatures as features
 import func.markElements as mark
-import func.objects as obj
 import func.analise as an
 import func.calibrate as ca
 import func.histogram

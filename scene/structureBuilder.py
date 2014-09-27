@@ -10,21 +10,23 @@ from Vertex import Vertex
 import cv2
 import copy
 import analyticGeometry as ag
+from LineDectecting import LineDetector
+import numpy as np
 
 class StructureBuilder(object):
     
-    def __init__(self,shape,corners,lines):
+    def __init__(self,shape):
         
-        self.shape = shape
-        
+        self.shape = shape        
     
-    def getMostLeftAndRightCorner(self,corners,shape):
+    def getMostLeftAndRightCorner(self,corners):
         '''
         zwraca wierchołki o najmniejszej i największej współrzędnej X
     
         corners - ndarray - wierzchołki (x,y)
         shape - tuple (h,w)
         '''
+        shape = self.shape
     
         # na wypadek gdyby nie znalazły się żadne wierzchołki wewnątrz głównego konturu
         if corners.size > 0:
@@ -46,7 +48,7 @@ class StructureBuilder(object):
         return left,right
     
     
-    def getAllCrossings(self,lines,shape,boundaries):
+    def getAllCrossings(self,lines,boundaries):
         '''
         zwraca punkty bedące przecięciami podanych prostych
     
@@ -55,6 +57,8 @@ class StructureBuilder(object):
     
         return [ (x,y) ] - lista puntków będacych przecieciami
         '''
+        
+        shape = self.shape
         linesGeneral = []
     
         for (rho, theta) in lines:
@@ -156,11 +160,13 @@ class StructureBuilder(object):
         return crossing,poly,vertexes
 
 
-    def getInnerSegments(self,otherLines,shape,poly):
+    def getInnerSegments(self,otherLines,poly):
         '''
         szukanie odcinka będącego krawędzią wewnętrzeną
     
         '''
+        
+        shape = self.shape
         result = {}
         for l in otherLines:
             l = ag.convertLineToGeneralForm(l,shape)
@@ -275,6 +281,9 @@ class StructureBuilder(object):
     
     
     def tryMatch(self,corners,left,right):
+        """
+            próbuje dopasować prawy i lewy punkt???
+        """
         min = left[0]
         max = right[0]
         Xs = []

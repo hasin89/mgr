@@ -468,16 +468,15 @@ class ContourDetector():
         return mainCNT
     
     
-    def getLongest(self):
-        
-        longestContour = []
-        
-        # szukanie najdłuższego - obiedni
-        contours = self.contorus
-        for cindex in range(len(contours)): 
-            cnt_len = len(contours[cindex])
-            if cnt_len>len(longestContour):
-                longestContour = contours[cindex]
-        
-        return longestContour
+def getLongest(contours):
+    
+    longestContour = []
+    
+    # szukanie najdłuższego - obiedni
+    for cindex in range(len(contours)): 
+        cnt_len = len(contours[cindex])
+        if cnt_len>len(longestContour):
+            longestContour = contours[cindex]
+    
+    return longestContour
         
