@@ -4,9 +4,9 @@ Created on Sep 27, 2014
 
 @author: Tomasz
 '''
-from Polyline import Polyline
-from Segment import Segment
-from Vertex import Vertex
+from geoobjects.Polyline import Polyline
+from geoobjects.Segment import Segment
+from geoobjects.Vertex import Vertex
 import cv2
 import copy
 import analyticGeometry as ag
