@@ -11,7 +11,7 @@ __author__ = 'tomek'
 
 import cv2
 import numpy as np
-import func.analise as an
+import analyticGeometry as an
 
 
 class ContourDetector():
