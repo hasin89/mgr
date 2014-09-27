@@ -3,7 +3,7 @@ Created on Sep 4, 2014
 
 @author: Tomasz
 '''
-import analyticGeometry
+import scene.analyticGeometry as analyticGeometry
 
 class Segment(object):
     def __init__(self):

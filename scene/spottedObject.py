@@ -8,7 +8,7 @@ import cv2
 
 from func import histogram
 from structureBuilder import StructureBuilder
-import Draw
+import drawings.Draw as Draw
 from CornerDectecting import CornerDetector
 from LineDectecting import LineDetector
 import ContourDectecting

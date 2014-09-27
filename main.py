@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy.lib.function_base import average
 from func import histogram
-from func.analise import getInnerSegments
 from scene import edge
 
 __author__ = 'tomek'
@@ -22,9 +20,7 @@ import func.browse as browse
 import numpy as np
 import func.trackFeatures as features
 import func.markElements as mark
-import func.analise as an
 import func.calibrate as ca
-import func.histogram
 
 
 def markCounturResult(img,edge):
