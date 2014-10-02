@@ -75,18 +75,15 @@ def decomposeProjectionMatrix(P):
     
     # Rotation matrix
     R[2,0] = P[2,0]
-    print str(R[2,0])+"\n"
     R[2,1] = P[2,1]
-    print str(R[2,1])+"\n"
     R[2,2] = P[2,2]
-    print str(R[2,2])+"\n"
     
     R[0,:] = ( P[0,:3] - K[0,2] * P[2,:3] ) / K[0,0] 
-    R[2,:] = ( P[1,:3] - K[1,2] * P[2,:3] ) / K[1,1]
+    R[1,:] = ( P[1,:3] - K[1,2] * P[2,:3] ) / K[1,1]
     
     # Orthogonality Enforcement
     [U,D,V] = svd(R)
-    D = np.ones([3,3])
+    D = np.eye(3)
     R = U*D*V
     
     #Tz Sign fixing

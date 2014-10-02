@@ -17,17 +17,22 @@ Y = [0,0,2,2,0,2]
 Z = [0,0,0,0,2,2]
 
 Points = []
+Points2 = []
 
 for i in range(len(x1)):
     element = ( (X[i],Y[i],Z[i]),(x1[i],y1[i]) )
     Points.append(element)
+    
+for i in range(len(x2)):
+    element = ( (X[i],Y[i],Z[i]),(x2[i],y2[i]) )
+    Points2.append(element)
     
     
 def calculate_camera_matrix(Points):
     """
         Points są postaci: [((X1,Y1,Z1),(imgX1,imgY1)), ]
     """
-    c = process_points(Points)
+    c = _process_points(Points)
     inv_c = np.linalg.pinv(c)
     
     x_series = []
@@ -52,7 +57,7 @@ def calculate_camera_matrix(Points):
     return camera_projection_matrix
 
 
-def process_points(Points): 
+def _process_points(Points): 
     a = []
     
     # %      A = [
@@ -79,8 +84,64 @@ def process_points(Points):
     return np.matrix(a)
 
 
-def recovery_3d():
+def recovery_3d(P1,P2,(x1,y1),(x2,y2)):
+    """
+     P1,P2 - macierze projekcji
+     p1,p2 - odpowiadające sobie punkty obrazu
+    """
+    C1 = []
+    C2 = []
     
-    pass
+    x = None
+    y = None
+    z = None
+    
+    C1.extend(P1[0,:].tolist()[0])
+    C1.extend(P1[1,:].tolist()[0])
+    C1.extend(P1[2,:].tolist()[0])
+    
+    C2.extend(P2[0,:].tolist()[0])
+    C2.extend(P2[1,:].tolist()[0])
+    C2.extend(P2[2,:].tolist()[0])
+    
+    A1,A2 = combine((x1, y1), C1)
+    B1,B2 = combine((x2, y2), C2)
+#     
+    xx = np.matrix([
+                    A1[0:3],
+                    A2[0:3],
+                    B1[0:3],
+                    B2[0:3],
+                    ])
+    
+    dd =  np.matrix([
+                    [-A1[3]],
+                    [-A2[3]],
+                    [-B1[3]],
+                    [-B2[3]],
+                    ])
+    
+    RR = np.linalg.pinv(xx) * dd
+    RR =  RR.tolist()
+    
+    x= RR[0][0]
+    y= RR[1][0]
+    z= RR[2][0]
+    
+    return x,y,z
+
+
+def combine((x,y),C):
+    a1 = C[0] - x * C[8];
+    b1 = C[1] - x * C[9];
+    c1 = C[2] - x * C[10];
+    d1 = C[3] - x * 1;
+    
+    a2 = C[4] - y * C[8];
+    b2 = C[5] - y * C[9];
+    c2 = C[6] - y * C[10];
+    d2 = C[7] - y * 1;
+    
+    return [a1,b1,c1,d1] , [a2,b2,c2,d2]
 
 calculate_camera_matrix(Points)

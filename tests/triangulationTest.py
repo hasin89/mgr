@@ -15,8 +15,13 @@ class triangulationTest(unittest.TestCase):
         np.set_printoptions(precision=4)
         
         self.Points = []
+        self.Points2 = []
+        
         x1 = [1908,2128,1595,1820,1910,1605]
         y1 = [2040,1842,1900,1737,2365,2225]
+        
+        x2 = [737,1007,885,1148,777,915]
+        y2 = [1419,1336,1514,1434,1677,1779]
         
         x2 = [737,1007,885,1148,777,915]
         y2 = [1419,1336,1514,1434,1677,1779]
@@ -29,10 +34,15 @@ class triangulationTest(unittest.TestCase):
             element = ( (X[i],Y[i],Z[i]),(x1[i],y1[i]) )
             self.Points.append(element)
 
+        for i in range(len(x2)):
+            element = ( (X[i],Y[i],Z[i]),(x2[i],y2[i]) )
+            self.Points2.append(element)
+
 
     def tearDown(self):
         np.set_printoptions(precision=6)
         pass
+    
     
     def testCameraMatrixShape(self):
         camera_matrix = triangulation.calculate_camera_matrix(self.Points)
@@ -49,7 +59,7 @@ class triangulationTest(unittest.TestCase):
 
     def testProcessPointsValues(self):
         
-        actual = triangulation.process_points(self.Points)
+        actual = triangulation._process_points(self.Points)
         expected = np.matrix([[    0,     0,     0,     1,     0,     0,     0,     0,      0,     0,     0],
                               [    2,     0,     0,     1,     0,     0,     0,     0,  -4256,     0,     0],
                               [    0,     2,     0,     1,     0,     0,     0,     0,     0,  -3190,     0],
@@ -73,17 +83,16 @@ class triangulationTest(unittest.TestCase):
         self.assert_(str(K)==str(K_),"K is not as expected")
         pass 
     
+    
     def testDecompositionR(self):
         R_ = np.matrix([[ 0.6058, -0.7951,  0.0289 ],
                         [ -0.3453,-0.2301,  0.9098 ],
                         [ 0.7167,  0.5612,  0.4140]])
-        print "expected"
-        print R_
         P = triangulation.calculate_camera_matrix(self.Points)
         K,R,t = DecompPMat.decomposeProjectionMatrix(P)
-        print R
         self.assert_(str(R)==str(R_),"R is not as expected")
         pass
+    
     
     def testDecompositionT(self):
         t_ = np.matrix([[ -74.77273186],
@@ -93,6 +102,46 @@ class triangulationTest(unittest.TestCase):
         K,R,t = DecompPMat.decomposeProjectionMatrix(P)
         self.assert_(str(t)==str(t_),"t is not as expected")
         pass
+    
+    
+    def testRecovery_3dX(self):
+        P1 = triangulation.calculate_camera_matrix(self.Points)
+        P2 = triangulation.calculate_camera_matrix(self.Points2)
+        
+        p1 = (1855,2625)
+        p2 = (517,1700)
+
+        X,Y,Z = triangulation.recovery_3d(P1,P2,p1,p2)
+        X_expected = -1.537
+        self.assert_(str(X)[:6]==str(X_expected),"X is not as expected:"+str(X)+" instead:"+str(X_expected))
+        pass
+    
+    
+    def testRecovery_3dY(self):
+        P1 = triangulation.calculate_camera_matrix(self.Points)
+        P2 = triangulation.calculate_camera_matrix(self.Points2)
+        
+        p1 = (1855,2625)
+        p2 = (517,1700)
+        
+        X,Y,Z = triangulation.recovery_3d(P1,P2,p1,p2)
+        Y_expected = -0.783 
+        self.assert_(str(Y)[:6]==str(Y_expected),"Y is not as expected:"+str(Y)+" instead:"+str(Y_expected))
+        pass
+    
+    
+    def testRecovery_3dZ(self):
+        P1 = triangulation.calculate_camera_matrix(self.Points)
+        P2 = triangulation.calculate_camera_matrix(self.Points2)
+        
+        p1 = (1855,2625)
+        p2 = (517,1700)
+        
+        X,Y,Z = triangulation.recovery_3d(P1,P2,p1,p2)
+        Z_expected = 1.997 
+        self.assert_(str(Z)[:5]==str(Z_expected),"X is not as expected:"+str(Z)+" instead:"+str(Z_expected))
+        pass
+    
     
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
