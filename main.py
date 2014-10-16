@@ -180,9 +180,9 @@ def run():
     # list.extend(range(11, 17))
     # list.extend(range(21, 26))
     # list = range(1,16)
-    list = [2]
+    list = [19]
 
-    folder = 7
+    folder = 8
     # print list
     for i in list:
         edge = None
@@ -198,6 +198,8 @@ def run():
             for n in [5]:
                 scene.gauss_kernel = n
                 scene.gamma = j
+                scene.constant = 2
+                scene.blockSize = 11
                 print (n,j)
                 
                 edge = scene.getEdges()

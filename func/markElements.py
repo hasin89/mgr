@@ -99,7 +99,7 @@ def drawHoughLines(lines,img):
             y0 = np.sin(theta)*rho
             pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
             pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-            cv2.line(img, pt1, pt2, (128,0,128), 1)
+            cv2.line(img, pt1, pt2, (128,0,128), 3)
             factor += 50
     return img
 

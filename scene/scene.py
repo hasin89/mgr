@@ -7,6 +7,7 @@ Created on Sep 3, 2014
 import func.trackFeatures as features
 import cv2
 from edge import edgeMap
+from md5 import blocksize
 
 
 class Scene(object):
@@ -26,6 +27,9 @@ class Scene(object):
         self.gauss_kernel = None
         self.gamma = None
         
+        self.constant = 0
+        self.blockSize = 0
+        
         self.edge_map = None
         
         self.getGrayScaleImage()
@@ -34,7 +38,8 @@ class Scene(object):
         
     def getEdges(self):
         
-        edge_filtred, vis = features.canny(self.view, self.gauss_kernel, self.gamma)
+        #edge_filtred, vis = features.canny(self.view, self.gauss_kernel, self.gamma)
+        edge_filtred, vis = features.adaptiveThreshold(self.view, self.gauss_kernel, self.gamma,self.constant,self.blockSize)
         self.edge_map = edgeMap(self.view, edge_filtred)
         
         return self.edge_map

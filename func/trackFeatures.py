@@ -65,8 +65,16 @@ def threshold(img, gauss_kernel=11, gammaFactor=0.45, threshold = 50):
 
     return edge_filtred,vis_filtred
 
+def filterImg(img,gauss_kernel= 11,gammaFactor=0.45):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    k = gauss_kernel
+    gray_filtred = gamma.correction(gray,gammaFactor)
+    gray_filtred = cv2.GaussianBlur(gray_filtred, (k, k), 0)
+    
+    return gray_filtred
 
-def adaptiveThreshold(img, gauss_kernel=11, gammaFactor=0.45, C = -3):
+
+def adaptiveThreshold(img, gauss_kernel=11, gammaFactor=0.45, C = -3,block=11):
 
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -75,7 +83,7 @@ def adaptiveThreshold(img, gauss_kernel=11, gammaFactor=0.45, C = -3):
     gray_filtred = cv2.GaussianBlur(gray_filtred, (k, k), 0)
 
     Cval = C
-    edge_filtred = cv2.adaptiveThreshold(gray_filtred,maxValue=1,adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,thresholdType=cv2.THRESH_BINARY,blockSize=11,C=Cval)
+    edge_filtred = cv2.adaptiveThreshold(gray_filtred,maxValue=255,adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,thresholdType=cv2.THRESH_BINARY_INV,blockSize=block,C=Cval)
 
     vis_filtred = img.copy()
     vis_filtred[edge_filtred != 0] = (0, 255, 0)

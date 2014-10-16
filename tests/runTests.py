@@ -5,3 +5,4 @@ Created on Sep 27, 2014
 '''
 import unittest
 from triangulationTest import triangulationTest 
+from edgeDetectionTest import edgeDetectionTest
