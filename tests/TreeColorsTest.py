@@ -10,7 +10,7 @@ import cv2
 import func.trackFeatures as features
 from scene.edge import edgeMap
 import func.markElements as mark
-
+from scene.analyticGeometry import convertLineToGeneralForm
 
 class TreeColorsTest(unittest.TestCase):
 
@@ -176,7 +176,7 @@ class TreeColorsTest(unittest.TestCase):
         
     def tes1tDistance1(self):
         folder = 8
-        i= 19
+        i= 77
                 
         filename = '../img/%d/%d.JPG' % (folder, i)
         
@@ -191,9 +191,9 @@ class TreeColorsTest(unittest.TestCase):
         self.calcDist(scene,gauss_kernel,constant,blockSize,tresh,folder,i)
         
     def testDistance2(self):
-        folder = 8
+        folder = 7
         i= 77
-        i =3
+        i =2
                 
         filename = '../img/%d/%d.JPG' % (folder, i)
         factor = 1.000
@@ -214,6 +214,71 @@ class TreeColorsTest(unittest.TestCase):
         
         
         self.calcDist(scene,gauss_kernel,constant,blockSize,tresh,folder,i)
+        
+    def testHorizontal(self):
+        folder = 4
+        i= 77
+        i =10
+                
+        filename = '../img/%d/%d.JPG' % (folder, i)
+        print "horizotal"
+        print filename
+        factor = 1
+        scene = self.loadImage(filename,factor)
+        
+        gauss_kernel = 5
+        constant = 5
+        blockSize = 101
+        tresh = 4
+        
+        mask = self.calcDist(scene,gauss_kernel,constant,blockSize,tresh,folder,i)
+        
+        rho = 1.5
+        # theta = 0.025
+        theta = np.pi/180
+        
+        threshold=int(mask.shape[1]/3)
+        
+        #znaldz linie hougha
+        
+        lines2 = cv2.HoughLines(mask,rho,theta,threshold)
+        
+        Amin = 2
+        for (rho,theta) in lines2[0][:2]:
+            print (rho,theta)
+            line = convertLineToGeneralForm((rho,theta),mask.shape)
+            A = abs((round(line[0],0)))
+            if A<Amin:
+                mirror_line = line
+                Amin=A 
+        
+        mirror_line
+        
+        vis1 = np.where(mask==1,255,0).astype('uint8')
+        
+        mark.drawHoughLines(lines2[0][:2],vis1) 
+        
+        
+        reflected, direct,point = self.divide(mirror_line, vis1)
+        print point
+        cv2.circle(vis1, point ,150,255,-1)
+        
+        
+        f = '../img/results/matching/%d/folder_%d_%d_test_Hough2_.jpg' % (folder,folder, i)
+        cv2.imwrite(f,vis1)
+        f = '../img/results/matching/%d/folder_%d_%d_test_dir_.jpg' % (folder,folder, i)
+        cv2.imwrite(f,reflected)
+        f = '../img/results/matching/%d/folder_%d_%d_test_ref_.jpg' % (folder,folder, i)
+        cv2.imwrite(f,direct)
+        
+    def divide(self, mirror_line, img):
+        
+#         Ax+By+c self.width
+        y = abs((mirror_line[0]*img.shape[0]/2.0+mirror_line[2])/mirror_line[1])
+        reflected = img[:y, :]
+        direct = img[y:, :]
+        
+        return reflected, direct,(int(img.shape[1]/2) , abs(int(y)))
         
         
     def calcDist(self,scene,gauss_kernel,constant,blockSize,tresh,folder,i):
@@ -236,9 +301,10 @@ class TreeColorsTest(unittest.TestCase):
         mask = np.where(dst>tresh,255,0).astype('uint8')
         f = '../img/results/matching/%d/folder_%d_%d_test_distance_map_.jpg' % (folder,folder, i)
         cv2.imwrite(f,mask)
-        pass
+        mask = np.where(dst>tresh,1,0).astype('uint8')
+        return mask
     
-    def testForBlue(self):
+    def tes1tForBlue(self):
         
         folder = 8
         i= 19
@@ -264,7 +330,7 @@ class TreeColorsTest(unittest.TestCase):
         f = '../img/results/matching/%d/folder_%d_%d_test_niebieski_.jpg' % (folder,folder, i)
         cv2.imwrite(f,edge_filtred)
         
-    def testForGreen(self):
+    def tes1tForGreen(self):
         
         folder = 8
         i= 19
@@ -290,7 +356,7 @@ class TreeColorsTest(unittest.TestCase):
         f = '../img/results/matching/%d/folder_%d_%d_test_zielony_.jpg' % (folder,folder, i)
         cv2.imwrite(f,edge_filtred)
         
-    def testForRed(self):
+    def tes1tForRed(self):
         
         folder = 8
         i= 19
@@ -316,7 +382,7 @@ class TreeColorsTest(unittest.TestCase):
         f = '../img/results/matching/%d/folder_%d_%d_test_czerwony_.jpg' % (folder,folder, i)
         cv2.imwrite(f,edge_filtred)
         
-    def testForGray(self):
+    def tes1tForGray(self):
         
         folder = 8
         i= 19

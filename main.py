@@ -202,12 +202,12 @@ def run():
                 scene.blockSize = 11
                 print (n,j)
                 
-                edge = scene.getEdges()
+                edge = scene.getEdges2()
                 
                 f = 'img/results/matching/%d/folder_%d_%d_edge_.jpg' % (folder,folder, i)
                 cv2.imwrite(f,edge.map)
 
-                mirror_line = edge.getMirrorLine()
+                mirror_line = edge.getMirrorLine2()
                 #
                 f = 'img/results/matching/%d/folder_%d_gray.jpg' % (folder,i)
                 cv2.imwrite(f,scene.gray)
@@ -216,6 +216,12 @@ def run():
                 view_reflected, view_direct = scene.divide(mirror_line)
                 reflected, direct = edge.divide(mirror_line)
                 
+                f = 'img/results/matching/%d/folder_%d_%d_odbicie_.png' % (folder,folder,i)
+                cv2.imwrite(f,reflected.map,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+                
+                f = 'img/results/matching/%d/folder_%d_%d_bezposredni_.png' % (folder,folder,i)
+                cv2.imwrite(f,direct.map,[cv2.IMWRITE_PNG_COMPRESSION,0] )
+                print "s"
                 # wyrównanie wymiarów (tak żeby oba miały ten sam kształt) wg mniejszego
 
                 up_height = view_reflected.height

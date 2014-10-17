@@ -55,7 +55,7 @@ def point(img,point):
 
 
 def YellowPoint(img,point):
-    cv2.circle(img, point ,3,(0,255,244,0),1)
+    cv2.circle(img, point ,30,(0,255,244,0),1)
 
     return img
 

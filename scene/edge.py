@@ -10,6 +10,7 @@ from func import histogram
 from ContourDectecting import ContourDetector
 from ObjectDectecting import ObjectDetector
 from spottedObject import spottedObject
+from analyticGeometry import convertLineToGeneralForm
 
 
 class edgeMap(object):
@@ -65,18 +66,37 @@ class edgeMap(object):
         self.mirror_line = [a, b]
         # return h,non[0][0],non[0][-1],[a,b]
         return self.mirror_line
+    
+    def getMirrorLine2(self):
+        rho = 1.5
+        # theta = 0.025
+        theta = np.pi/180
+        
+        threshold=int(self.map.shape[1]/3)
+        lines2 = cv2.HoughLines(self.map,rho,theta,threshold)
+        
+        Amin = 2
+        for (rho,theta) in lines2[0][:2]:
+            print (rho,theta)
+            line = convertLineToGeneralForm((rho,theta),self.map.shape)
+            A = abs((round(line[0],0)))
+            if A<Amin:
+                self.mirror_line = line
+                Amin=A 
+        
+        return self.mirror_line
    
     
     def divide(self, mirror_line=None):
-        """
-            dzieli mapę wzdłóż lini poziomych o znanych wspołrzędnych obrazowych
-        """
         if mirror_line == None:
             mirror_line = self.mirror_line
-        reflected = edgeMap(self.view, self.map[:mirror_line[0], :])
-        direct = edgeMap(self.view, self.map[mirror_line[1]:, :])
         
-        return reflected,direct
+#         Ax+By+c self.width
+        y = abs((mirror_line[0]*self.width/2.0+mirror_line[2])/mirror_line[1])
+        reflected = edgeMap(self.view,self.map[:y, :])
+        direct = edgeMap(self.view,self.map[y:, :])
+        
+        return reflected, direct
     
     def findObject(self):
         '''
