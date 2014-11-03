@@ -14,6 +14,7 @@ from scene.analyticGeometry import convertLineToGeneralForm
 from scene.mirrorDetector import mirrorDetector
 from scene.zone import Zone
 
+
 class LocalizationTest(unittest.TestCase):
 
 
@@ -50,11 +51,25 @@ class LocalizationTest(unittest.TestCase):
         scene = self.loadImage(filename,factor)
         
         md = mirrorDetector(scene)
-        md.findEdges(scene)
+        edges = md.findEdges(scene)
         md.findMirrorLine(md.edges_mask)
-        direct = md.getDirectZone(md.mirror_line)
         
-        direct.mask
+        print "mirror line:"+str(md.mirror_line)
+        direct = md.getReflectedZone(md.mirror_line)
+        
+        edges2 = np.where(direct.mask>0,edges,0).astype('uint8')
+        edges2 = np.where(edges2>0,255,0).astype('uint8')
+        print md.calculateLineMiddle()
+        middle = md.calculateLineMiddle()
+        cv2.circle(edges2,middle,1000,255,3)
+        
+        mark.drawHoughLines([md.mirror_line_Hough],edges2) 
+        
+        print edges2.shape
+        print len(np.nonzero(edges)[0])
+        print len(np.nonzero(edges2)[0])
+        filename = '../img/results/test.JPG'
+        cv2.imwrite(filename,edges2)
         
             
     def loadImage(self,filename,factor = 1):

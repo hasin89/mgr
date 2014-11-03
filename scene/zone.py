@@ -15,7 +15,7 @@ class Zone(object):
     def __init__(self,image,x,y,width,height):
         self.offsetX = x
         self.offsetY = y
-        
+
 #         self.scene.view[y:, :]
         
         self.image = image[y:y+height, x:x+width]

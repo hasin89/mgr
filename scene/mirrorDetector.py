@@ -39,26 +39,27 @@ class mirrorDetector(object):
         
         self.edges_mask = self.findEdges(self.scene)
         
+        self.mirror_line_Hough = None
         self.mirror_line = self.findMirrorLine(self.edges_mask)
         
     
     def getReflectedZone(self,mirror_line):
-        
-        y = abs((mirror_line[0]*self.scene.view.shape[0]/2.0+mirror_line[2])/mirror_line[1])
-        reflected = self.scene.view[:y, :]
-        
+        (x,y) = self.calculateLineMiddle()
         reflected = Zone(self.scene.view,0,0,self.scene.width,y)
         
         return reflected
     
     def getDirectZone(self,mirror_line):
-        y = abs((mirror_line[0]*self.scene.view.shape[0]/2.0+mirror_line[2])/mirror_line[1])
-        
-        direct = self.scene.view[y:, :]
-        
+        (x,y) = self.calculateLineMiddle()
         direct = Zone(self.scene.view,0,y,self.scene.width,self.scene.height-y)
         
         return direct
+    
+    def calculateLineMiddle(self):
+        x = int(self.scene.width/2)
+        y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
+        
+        return (x,y)
 
     def findEdges(self,scene):
         '''
@@ -120,6 +121,7 @@ class mirrorDetector(object):
         # znajdź linie o najmniejszym parametrze A (najbliższym poziomego) A=0 idealnie pozioma linia. max odchylenie 22.5
         Amin = 2
         mirror_line = None
+        mirror_line_Hough = None
         
         for (rho,theta) in lines2[0][:2]:
             print (rho,theta)
@@ -127,9 +129,10 @@ class mirrorDetector(object):
             A = abs((round(line[0],0)))
             if A<Amin:
                 mirror_line = line
+                mirror_line_Hough = (rho,theta) 
                 Amin=A 
         
         if mirror_line == None:
             raise Exception("Mirror line not found!")
-        
+        self.mirror_line_Hough = mirror_line_Hough
         return mirror_line
