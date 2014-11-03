@@ -5,6 +5,7 @@ Created on Oct 31, 2014
 @author: Tomasz
 '''
 import numpy as np
+import cv2
 
 class Zone(object):
     
@@ -12,23 +13,41 @@ class Zone(object):
     
     offsetY = None
     
-    def __init__(self,image,x,y,width,height):
+    def __init__(self,image,x,y,width,height,mask=None):
         self.offsetX = x
         self.offsetY = y
+        
+        self.width = width
+        self.height = height
 
 #         self.scene.view[y:, :]
         
-        self.image = image[y:y+height, x:x+width]
-        mask = np.zeros(image.shape[:2],dtype='uint8')
+        #smaller image for calculations
+        self.origin = image
         
-        roi = np.ones((height,width),dtype='uint8')
+        if mask is not None:
+            self.mask = mask
+        else:
+            mask = np.zeros(image.shape[:2],dtype='uint8')
+            roi = np.ones((height,width),dtype='uint8')
+            mask[y:y+height, x:x+width] = roi
+            self.mask = mask
+        print mask.shape
+        print image.shape
         
-        self.mask = mask
-        self.mask[y:y+height, x:x+width] = roi
-        
-        self.preview = image.copy()
-        self.preview[:,:,:] = (0,0,0)
-        self.preview[y:y+height, x:x+width] = self.image
+        #local and global image with mask
+        self.getFiltredImge()    
                 
-        self.width = width
-        self.height = height
+        
+    def getPreview(self):
+        m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
+        self.preview = self.origin*m3
+        
+        return self.preview
+    
+    def getFiltredImge(self):
+        m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
+        self.getPreview()
+        self.image = self.preview[self.offsetY:self.offsetY+self.height, self.offsetX:self.offsetX+self.width]
+        
+        return self.image 

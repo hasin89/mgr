@@ -136,3 +136,7 @@ class mirrorDetector(object):
             raise Exception("Mirror line not found!")
         self.mirror_line_Hough = mirror_line_Hough
         return mirror_line
+    
+    def findMirrorZone(self):
+        
+        mirrorZone = Zone(self.scene.view,x,y,width,height)
