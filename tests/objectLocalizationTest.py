@@ -63,13 +63,17 @@ class LocalizationTest(unittest.TestCase):
         middle = md.calculateLineMiddle()
         cv2.circle(edges2,middle,1000,255,3)
         
-        mark.drawHoughLines([md.mirror_line_Hough],edges2) 
+        mark.drawHoughLines([md.mirror_line_Hough],edges2)
+        mark.drawHoughLines([(md.mirror_line_Hough[0]+30,md.mirror_line_Hough[1])],edges2) 
+        mark.drawHoughLines([(md.mirror_line_Hough[0]-30,md.mirror_line_Hough[1])],edges2)  
         
         print edges2.shape
         print len(np.nonzero(edges)[0])
         print len(np.nonzero(edges2)[0])
         filename = '../img/results/test.JPG'
-        cv2.imwrite(filename,edges2)
+        cv2.circle(direct.mask,middle,1000,0,-1)
+        direct.getFiltredImge()
+        cv2.imwrite(filename,direct.image)
         
             
     def loadImage(self,filename,factor = 1):
