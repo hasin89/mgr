@@ -11,6 +11,7 @@ import func.trackFeatures as features
 from scene.edge import edgeMap
 import func.markElements as mark
 from scene.analyticGeometry import convertLineToGeneralForm
+from scene.mirrorDetector import mirrorDetector
 
 class TreeColorsTest(unittest.TestCase):
 
@@ -216,9 +217,11 @@ class TreeColorsTest(unittest.TestCase):
         self.calcDist(scene,gauss_kernel,constant,blockSize,tresh,folder,i)
         
     def testHorizontal(self):
+        print 'test horizontal division'
         folder = 4
         i= 77
         i =10
+        i=7
                 
         filename = '../img/%d/%d.JPG' % (folder, i)
         print "horizotal"
@@ -270,6 +273,76 @@ class TreeColorsTest(unittest.TestCase):
         cv2.imwrite(f,reflected)
         f = '../img/results/matching/%d/folder_%d_%d_test_ref_.jpg' % (folder,folder, i)
         cv2.imwrite(f,direct)
+        
+    def testDivision(self):
+        
+        self.testHorizontal()
+        folder = 8
+        i= 77
+        i =7
+        
+        filename = '../img/%d/%d.JPG' % (folder, i)
+        print "testing division old and new style"
+        
+        factor = 1
+        scene = self.loadImage(filename,factor)
+        
+        gauss_kernel = 5
+        constant = 5
+        blockSize = 101
+        tresh = 4
+        
+        mask = self.calcDist(scene,gauss_kernel,constant,blockSize,tresh,folder,i)
+        
+        rho = 1.5
+        # theta = 0.025
+        theta = np.pi/180
+        
+        threshold=int(mask.shape[1]/3)
+        
+        #znaldz linie hougha
+        
+        lines2 = cv2.HoughLines(mask,rho,theta,threshold)
+        
+        Amin = 2
+        for (rho,theta) in lines2[0][:2]:
+            print (rho,theta)
+            line = convertLineToGeneralForm((rho,theta),mask.shape)
+            A = abs((round(line[0],0)))
+            if A<Amin:
+                mirror_line = line
+                Amin=A 
+        
+        mirror_line
+        
+        vis1 = np.where(mask==1,255,0).astype('uint8')
+        
+        mark.drawHoughLines(lines2[0][:2],vis1) 
+        
+        
+        reflected1, direct1,point = self.divide(mirror_line, vis1)
+        print point
+        cv2.circle(vis1, point ,150,255,-1)
+        
+        #new code for the same
+                
+        filename = '../img/%d/%d.JPG' % (folder, i)
+        factor = 1
+        scene = self.loadImage(filename,factor)
+        
+        md = mirrorDetector(scene)
+        md.findEdges(scene)
+        md.findMirrorLine(md.edges_mask)
+        direct = md.getDirectZone(md.mirror_line)
+        reflected = md.getReflectedZone(md.mirror_line)
+        
+        reflected.mask
+                
+        if reflected.image.shape[0:2] != reflected1.shape: 
+            raise Exception("Division size not match: reflected"+str(reflected.image.shape[0:2])+str(reflected1.shape))
+        
+        if direct.image.shape[0:2] != direct1.shape:
+            raise Exception("Division size not match:direct"+str(direct.image.shape[0:2])+str(direct1.shape))
         
     def divide(self, mirror_line, img):
         
