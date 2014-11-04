@@ -32,8 +32,6 @@ class Zone(object):
             roi = np.ones((height,width),dtype='uint8')
             mask[y:y+height, x:x+width] = roi
             self.mask = mask
-        print mask.shape
-        print image.shape
         
         #local and global image with mask
         self.getFiltredImge()    
@@ -50,4 +48,7 @@ class Zone(object):
         self.getPreview()
         self.image = self.preview[self.offsetY:self.offsetY+self.height, self.offsetX:self.offsetX+self.width]
         
-        return self.image 
+        return self.image
+    
+    def clearMask(self):
+        self.mask = np.ones(self.origin.shape[:2],dtype='uint8')
