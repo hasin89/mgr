@@ -129,7 +129,7 @@ class mirrorDetector(object):
         mirror_line = None
         mirror_line_Hough = None
         
-        for (rho,theta) in lines2[0][:2]:
+        for (rho,theta) in lines2[0][:7]:
             
             line = convertLineToGeneralForm((rho,theta),mask.shape)
             A = abs((round(line[0],0)))
