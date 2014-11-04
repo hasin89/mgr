@@ -30,6 +30,10 @@ class mirrorDetector(object):
     # theta = 0.025
     # rozdzielczosc kata
     theta = np.pi/180
+    
+    # progowa dlugosc lini
+    h_treshold = None
+    
     # odwrotnosc minimalnej czesci długości obrazu np. 2 oznacza 50%, 3 oznacza 33% = 1/3
     part = 3
         
@@ -41,6 +45,7 @@ class mirrorDetector(object):
         
         self.mirror_line_Hough = None
         self.mirror_line = self.findMirrorLine(self.edges_mask)
+        
         
     
     def getReflectedZone(self,mirror_line):
@@ -66,7 +71,7 @@ class mirrorDetector(object):
             find edges mask necessary to find the mirror line
         '''
         
-        print 'horizontal division'
+        print 'find edges mask'
         
         gauss_kernel = self.gauss_kernel
         tresholdMaxValue = self.tresholdMaxValue
@@ -105,6 +110,7 @@ class mirrorDetector(object):
         function responsible for division of the direct and reflected image
         '''
         
+        print 'looking for the mirror line'
         mask = edges_mask
         
         part = self.part
@@ -114,7 +120,7 @@ class mirrorDetector(object):
         
         threshold=int(mask.shape[1]/part)
         
-        
+        self.h_treshold = threshold
         #znaldz linie hougha
         lines2 = cv2.HoughLines(mask,rho,theta,threshold)
         
@@ -124,7 +130,7 @@ class mirrorDetector(object):
         mirror_line_Hough = None
         
         for (rho,theta) in lines2[0][:2]:
-            print (rho,theta)
+            
             line = convertLineToGeneralForm((rho,theta),mask.shape)
             A = abs((round(line[0],0)))
             if A<Amin:
@@ -133,6 +139,15 @@ class mirrorDetector(object):
                 Amin=A 
         
         if mirror_line == None:
+            print 'detected lines:'
+            print lines2[0]
+            
+            if len(lines2[0])>0:
+                
+                import func.markElements as mark
+                mark.drawHoughLines(lines2[0], self.scene.view, (128,0,128), 5)
+                self.scene.view[mask == 1] = (255,0,0)
+                                    
             raise Exception("Mirror line not found!")
         self.mirror_line_Hough = mirror_line_Hough
         return mirror_line
