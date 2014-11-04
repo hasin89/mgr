@@ -84,7 +84,7 @@ def object(img,mainCNT):
 
     return img
 
-def drawHoughLines(lines,img):
+def drawHoughLines(lines,img,color=(128,0,128),thickness=3):
 
     # dla kolorowych obrazow sa 3 wymiary , 3 jest zbędny nam potem
     if len(img.shape) == 2:
@@ -99,7 +99,7 @@ def drawHoughLines(lines,img):
             y0 = np.sin(theta)*rho
             pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
             pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
-            cv2.line(img, pt1, pt2, (128,0,128), 3)
+            cv2.line(img, pt1, pt2, color, thickness)
             factor += 50
     return img
 
