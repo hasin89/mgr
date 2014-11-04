@@ -35,7 +35,7 @@ class mirrorDetector(object):
     h_treshold = None
     
     # odwrotnosc minimalnej czesci długości obrazu np. 2 oznacza 50%, 3 oznacza 33% = 1/3
-    part = 3
+    part = 3.5
         
     def __init__(self,scene):
         
