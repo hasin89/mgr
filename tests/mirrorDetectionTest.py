@@ -50,7 +50,7 @@ class LocalizationTest(unittest.TestCase):
         mark.drawHoughLines([md.mirror_line_Hough], scene.view, (128, 0, 128), 5)
         
         f = '../img/results/automated/%d/%d_mirror_detection_%f_%f.jpg' % (folder, i, md.rho,md.part)
-        print 'svaing to ' + f
+        print 'savaing to ' + f
         cv2.imwrite(f, scene.view)
         
         if scene.view.shape[1] / 2 != middle[0]:
