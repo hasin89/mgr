@@ -37,6 +37,19 @@ class LocalizationTest(unittest.TestCase):
         y = 1200
         direct = Zone(scene.view,0,y,scene.width,scene.height-y)
         
+        middle = (2592, 4608)
+        
+        cv2.circle(direct.mask,middle,1000,255,3)
+        
+        filename = '../img/results/test.JPG'
+        
+        cv2.circle(direct.mask,middle,1000,0,-1)
+        
+        direct.clearMask()
+        
+        direct.getFiltredImge()
+        
+        
         
     def testDivision(self):
         
@@ -63,17 +76,20 @@ class LocalizationTest(unittest.TestCase):
         middle = md.calculateLineMiddle()
         cv2.circle(edges2,middle,1000,255,3)
         
-        mark.drawHoughLines([md.mirror_line_Hough],edges2)
+        mark.drawHoughLines([md.mirror_line_Hough],direct.mask,1,50)
         mark.drawHoughLines([(md.mirror_line_Hough[0]+30,md.mirror_line_Hough[1])],edges2) 
         mark.drawHoughLines([(md.mirror_line_Hough[0]-30,md.mirror_line_Hough[1])],edges2)  
         
         print edges2.shape
         print len(np.nonzero(edges)[0])
         print len(np.nonzero(edges2)[0])
+        
         filename = '../img/results/test.JPG'
         cv2.circle(direct.mask,middle,1000,0,-1)
+        
         direct.getFiltredImge()
         cv2.imwrite(filename,direct.image)
+        
         
             
     def loadImage(self,filename,factor = 1):
