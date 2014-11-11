@@ -19,6 +19,9 @@ class Zone(object):
         
         self.width = width
         self.height = height
+        
+        self.image = None
+        self.preview = None
 
 #         self.scene.view[y:, :]
         
@@ -38,17 +41,48 @@ class Zone(object):
                 
         
     def getPreview(self):
-        m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
+        '''
+        return ROI on the original image canvas
+        determined by mask 
+        the same size as original
+        global image
+        '''
+        print 'origin shape' + str(self.origin.shape)
+        if len(self.origin.shape) == 3:
+            m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
+        else:
+            m3 = self.mask
         self.preview = self.origin*m3
         
         return self.preview
     
+    
     def getFiltredImge(self):
-        m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
+        '''
+        return image of ROI. This image is fragment of the original one and it is smaller.
+        Determined by mask
+        local image
+        '''
         self.getPreview()
         self.image = self.preview[self.offsetY:self.offsetY+self.height, self.offsetX:self.offsetX+self.width]
         
         return self.image
     
+    
     def clearMask(self):
+        '''
+        clear the mask
+        '''
         self.mask = np.ones(self.origin.shape[:2],dtype='uint8')
+        
+        
+    def setMargin(self,margin):
+        
+        newOffsetX = self.offsetX + margin 
+        newOffsetY = self.offsetY + margin
+        newWidth = self.width - margin - margin
+        newHeight = self.height - margin - margin
+        
+        s = self.__init__(self.origin, newOffsetX, newOffsetY, newWidth, newHeight)
+        
+        return s 
