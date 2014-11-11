@@ -26,13 +26,14 @@ class LabelFactory(object):
         L = np.zeros_like(binary)
         P = {}
         
+        copy = self.copy
+        copy2 = self.copy2
+        
         foreground = np.nonzero(binary)
         
         for y,x in np.nditer(foreground):
-#             print x,y
             
-#             print self.binary[(y,x)]
-            
+
             a = (y-1,x-1) 
             b = (y-1,x)
             c = (y-1,x+1)
@@ -41,31 +42,31 @@ class LabelFactory(object):
             
             #b
             if binary[b]:
-                self.copy(e, b)
+                copy(e, b)
             #c
             elif binary[c]:
                 #a
                 if binary[a]:
-                    self.copy2(e, c, a)
+                    copy2(e, c, a)
                 #d
                 elif binary[d]:
-                    self.copy2(e, c, d)
+                    copy2(e, c, d)
                 else:
-                    self.copy(e, c)
+                    copy(e, c)
             
             #a
             elif binary[a]:
-                self.copy(e, a)    
+                copy(e, a)    
             
             #d
             elif binary[d]:
-                self.copy(e, d)
+                copy(e, d)
             
             else:
                 # set current label
                 currentLabel + 1
-                self.L[e] = self.currentLabel
-                self.P[self.currentLabel] = self.currentLabel
+                self.L[e] = currentLabel
+                self.P[currentLabel] = currentLabel
         
     def run2(self):
         
@@ -128,16 +129,19 @@ class LabelFactory(object):
     
     def findRoot(self,label):
         root = label
-        while self.P[root] < root:
-            root = self.P[root]
+        P = self.P
+        while P[root] < root:
+            root = P[root]
         return root
     
     def setRoot(self,label,root):
-        while self.P[label] < label:
-            nextLabel = self.P[label]
-            self.P[label] = root
+        P = self.P
+        while P[label] < label:
+            nextLabel = P[label]
+            P[label] = root
             label = nextLabel
-        self.P[label] = root
+        P[label] = root
+        self.P = P
             
     def find(self,label):
         root = self.findRoot(label)
@@ -165,7 +169,7 @@ class LabelFactory(object):
     #decision tree
     
     def copy(self,currentPoint,point):
-        self.L[currentPoint[0],currentPoint[1]] = self.L[point[0],point[1]]
+        self.L[currentPoint] = self.L[point]
         
     def copy2(self,currentPoint,point1,point2):
         self.L[currentPoint] = self._union(self.L[point1], self.L[point2])
