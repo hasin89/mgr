@@ -24,7 +24,7 @@ class LabelFactory(object):
     def run(self,binary):
         currentLabel = 1
         L = np.zeros_like(binary)
-        P = {}
+        
         
         copy = self.copy
         copy2 = self.copy2
@@ -64,7 +64,7 @@ class LabelFactory(object):
             
             else:
                 # set current label
-                currentLabel + 1
+                currentLabel = currentLabel + 1
                 self.L[e] = currentLabel
                 self.P[currentLabel] = currentLabel
         
