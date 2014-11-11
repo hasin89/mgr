@@ -26,7 +26,30 @@ class LocalizationTest(unittest.TestCase):
         np.set_printoptions(precision=6)
         pass
     
-    def testZone(self):
+    def testMirrorVertical(self):
+        folder = 8
+        i =7
+        factor = 1
+        
+        filename = '../img/%d/%d.JPG' % (folder, i)
+        
+        scene = self.loadImage(filename, factor)
+        
+        try:
+            md = mirrorDetector(scene)
+        except Exception as e:
+            f = '../img/results/automated/%d_%d_mirror_vertical.jpg' % (folder, i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, scene.view)
+            raise e
+        
+        mirror_zone = md.findMirrorZone()
+        
+        f = '../img/results/automated/%d_%d_mirror_vertical.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, mirror_zone.preview)
+    
+    def t1estZone(self):
         factor = 1
         
         folder = 8
@@ -51,7 +74,7 @@ class LocalizationTest(unittest.TestCase):
         
         
         
-    def testDivision(self):
+    def t1estDivision(self):
         
         folder = 8
         i= 77
@@ -77,8 +100,7 @@ class LocalizationTest(unittest.TestCase):
         cv2.circle(edges2,middle,1000,255,3)
         
         mark.drawHoughLines([md.mirror_line_Hough],direct.mask,1,50)
-        mark.drawHoughLines([(md.mirror_line_Hough[0]+30,md.mirror_line_Hough[1])],edges2) 
-        mark.drawHoughLines([(md.mirror_line_Hough[0]-30,md.mirror_line_Hough[1])],edges2)  
+        mark.drawHoughLines([(md.mirror_line_Hough[0]-50,md.mirror_line_Hough[1])],edges2)  
         
         print edges2.shape
         print len(np.nonzero(edges)[0])
@@ -88,7 +110,7 @@ class LocalizationTest(unittest.TestCase):
         cv2.circle(direct.mask,middle,1000,0,-1)
         
         direct.getFiltredImge()
-        cv2.imwrite(filename,direct.image)
+        cv2.imwrite(filename,edges2)
         
         
             
