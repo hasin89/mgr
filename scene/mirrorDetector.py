@@ -9,6 +9,7 @@ import numpy as np
 from analyticGeometry import convertLineToGeneralForm
 from zone import Zone
 
+import func.markElements as mark
 
 
 class mirrorDetector(object):
@@ -46,6 +47,8 @@ class mirrorDetector(object):
         self.mirror_line_Hough = None
         self.mirror_line = self.findMirrorLine(self.edges_mask)
         
+        self.middle = self.calculateLineMiddle()
+        self.mirrorZone = None
         
     
     def getReflectedZone(self,mirror_line):
@@ -62,6 +65,12 @@ class mirrorDetector(object):
     
     def calculateLineMiddle(self):
         x = int(self.scene.width/2)
+        y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
+        
+        return (x,y)
+    
+    def calculatePointOnLine(self,x):
+        x = int(x)
         y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
         
         return (x,y)
@@ -143,8 +152,6 @@ class mirrorDetector(object):
             print lines2[0]
             
             if len(lines2[0])>0:
-                
-                import func.markElements as mark
                 mark.drawHoughLines(lines2[0], self.scene.view, (128,0,128), 5)
                 self.scene.view[mask == 1] = (255,0,0)
                                     
@@ -152,6 +159,41 @@ class mirrorDetector(object):
         self.mirror_line_Hough = mirror_line_Hough
         return mirror_line
     
+    
     def findMirrorZone(self):
+        #narysuj kreske na pustym obrazie
+        canvas = np.zeros_like(self.edges_mask)
         
-        mirrorZone = Zone(self.scene.view,x,y,width,height)
+        mark.drawHoughLines([(self.mirror_line_Hough[0]-100,self.mirror_line_Hough[1])], canvas, 1, 5)
+        
+        output = canvas*self.edges_mask
+        
+        o1 = np.nonzero(output)
+        o2 = np.transpose(o1)
+        
+        #debuging purpose
+        for o3 in o2:
+            cv2.circle(self.scene.view, (o3[1],o3[0]), 10, (255,0,0), -1)
+
+        right_side = np.where( (o1[1]-self.middle[0])>0, o1 , 999999 )
+        
+        if len(right_side[1])>0:
+            right = min(right_side[1])
+        else:
+            right = self.scene.width
+        
+        left_side = np.where( (self.middle[0] - o1[1]-1 )>0, o1 , 0 )
+        if len(left_side[1])>0:
+            left = max(left_side[1])
+        else:
+            left = 0
+        
+#         theta = 0
+#         mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
+        
+        mirrorZone = Zone(self.scene.view,left,0,right-left,self.scene.height)
+        self.mirrorZone=  mirrorZone
+        
+        return self.mirrorZone
+        
+#         
