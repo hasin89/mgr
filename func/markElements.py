@@ -117,7 +117,7 @@ def drawSegment(img,p1,p2):
     return img
 
 def drawMain(img,p1,p2):
-    cv2.line(img,p1,p2,(0,0,255),4)
+    cv2.line(img,p1,p2,255,4)
     return img
 
 def drawMarker(img,p1,p2):

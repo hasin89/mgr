@@ -7,6 +7,7 @@ __author__ = 'tomek'
 import cv2
 import sys
 import numpy as np
+import colorsys
 
 
 def Point(img, point, size=5, color=(255, 255, 0, 0), thickness=2):
@@ -39,3 +40,10 @@ def Segment(img, p1, p2, color=(255, 255, 255), thickness=4):
     """
     cv2.line(img, p1, p2, color, thickness)
     return img
+
+def getColors(N):
+    
+    HSV_tupples = [(x*1.0/N,1,255) for x in range(N)]
+    RGB_tuples = map(lambda x:colorsys.hsv_to_rgb(*x),HSV_tupples)
+    BGR_tuples = map(lambda x:( int(x[2]), int(x[1]), int(x[0]) ),RGB_tuples)
+    return BGR_tuples

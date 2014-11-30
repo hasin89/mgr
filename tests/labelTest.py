@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 from calculations.labeling import LabelFactory
 from scene.mirrorDetector import mirrorDetector
+from drawings.Draw import getColors
 
 class LocalizationTest(unittest.TestCase):
 
@@ -20,6 +21,33 @@ class LocalizationTest(unittest.TestCase):
     def tearDown(self):
         np.set_printoptions(precision=6)
         pass
+    
+    def testLabelingTransform(self):
+        P = {2:2,3:3,4:4,5:5,6:4,8:4,9:2}
+        L = np.array([
+                      [0,2,2,9,0],
+                      [0,0,0,0,0],
+                      [0,0,3,0,0],
+                      [0,0,0,0,4],
+                      [0,5,0,6,4],
+                      [0,0,0,8,8]
+                      ])
+        for k,v in P.iteritems():
+            L = np.where(L == k,v,L)
+            pass
+        uu =  np.unique(L)
+        colorSpace = np.zeros((L.shape[0],L.shape[1],3),dtype='uint8')
+        colors = getColors(len(uu))
+        
+        tempspace1 = L.copy()
+        for i in range(0,len(uu)):
+            if uu[i] == 0:
+                continue
+            tempspace = np.where(tempspace1 == uu[i],1,0)
+            ids = np.nonzero(tempspace)
+            colorSpace[ids] = colors[i]
+        print L
+        print colorSpace
     
     def label(self,folder,pic):
         i = pic
@@ -47,6 +75,16 @@ class LocalizationTest(unittest.TestCase):
         e2 = cv2.getTickCount()
         print "time "+str( (e2-e1)/cv2.getTickFrequency())
         print lf.P
+        Pperm = lf.P.copy()
+        lf.P = Pperm.copy()
+        lf.flattenLabels()
+        print lf.P
+        print len(lf.P)
+        
+        lf.P = Pperm.copy() 
+        lf.flatten()
+        print lf.P
+        print len(lf.P)
         
 #         lf2 = LabelFactory(edge)
         
@@ -71,7 +109,7 @@ class LocalizationTest(unittest.TestCase):
         return time
         
     
-    def test_8_3(self):
+    def tes1t_8_3(self):
         self.label(8, 3)
         
     def tes1t_8_6(self):

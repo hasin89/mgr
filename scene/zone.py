@@ -47,7 +47,7 @@ class Zone(object):
         the same size as original
         global image
         '''
-        print 'origin shape' + str(self.origin.shape)
+#         print 'origin shape' + str(self.origin.shape)
         if len(self.origin.shape) == 3:
             m3 = self.mask.reshape(self.mask.shape[0],self.mask.shape[1],1)
         else:
@@ -86,3 +86,6 @@ class Zone(object):
         s = self.__init__(self.origin, newOffsetX, newOffsetY, newWidth, newHeight)
         
         return s 
+    
+    def getRectangle(self):
+        return self.offsetX,self.offsetY,self.width,self.height

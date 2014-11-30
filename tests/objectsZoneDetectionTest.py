@@ -15,7 +15,12 @@ from scene.mirrorDetector import mirrorDetector
 from scene.zone import Zone
 from scene.ContourDectecting import ContourDetector
 from scene.ObjectDectecting import ObjectDetector
+from drawings.Draw import getColors
 
+from calculations.labeling import LabelFactory
+from drawings.Draw import getColors
+
+from scene import analyticGeometry
 
 class ObjectLocalizationTest(unittest.TestCase):
 
@@ -40,6 +45,150 @@ class ObjectLocalizationTest(unittest.TestCase):
         
         return zone 
     
+    def findObject(self,origin,folder,pic,letter):
+        lf = LabelFactory(origin)
+        e1 = cv2.getTickCount()
+        lf.run(origin)
+        e2 = cv2.getTickCount()
+        print "time "+str( (e2-e1)/cv2.getTickFrequency())
+
+        lf.flattenLabels()
+        
+        print 'preview:'
+        e1 = cv2.getTickCount()
+#         colorSpace = lf.getPreview()
+        e2 = cv2.getTickCount()
+        print "time "+str( (e2-e1)/cv2.getTickFrequency())
+        
+        contours = lf.convert2ContoursForm()
+        
+        cd = ContourDetector(origin)
+        
+        print 'find objects:'
+        e1 = cv2.getTickCount()
+        objects,margin = cd.findObjects(contours)
+        print 'margin ',margin
+        e2 = cv2.getTickCount()
+        print "time "+str( (e2-e1)/cv2.getTickFrequency())
+        
+        center = []
+        smallSquares = []
+        area = []
+        rects = []
+        small = []
+        circles = []
+        rectangles = []
+        
+        for j,BND in enumerate(objects):
+            x,y,w,h = cv2.boundingRect(BND)
+            
+            #filtracja obiektow po prawej i lewej krawedzi oraz z dolu
+            if x == 1 or x+w+1 == origin.shape[1] or y+h+1 == origin.shape[0]:
+                
+                center.append(None)
+                area.append(None)
+                rects.append(None)
+                rectangles.append(None)
+                
+                continue
+            
+#             if y == 1 and letter in ['C','D']:
+#                 continue
+            center_i = (h/2,w/2)
+            area_i = h*w
+            
+            center.append(center_i)
+            area.append(area_i)
+            rects.append((x,y,w,h))
+            
+            if abs(h-w) < max(h,w)*0.1:
+                #przypadek kwadratu
+                
+                
+                if abs ( margin*2 - w ) < w*0.1:
+                    print 'small square: ',(x,y, h, w)
+                    small.append(j)
+                    test1 = np.zeros_like(origin)
+                    cv2.circle(test1,(int(x+w/2),int(y+h/2)),int(margin*2.5),200,1)
+                    cv2.circle(origin,(int(x+w/2),int(y+h/2)),int(margin*2.5),200,1)
+                    c1 = np.nonzero(test1)
+                    c11 = np.transpose(c1)
+                    circles.append(map(tuple,c11))
+                    
+                    
+                #cv2.circle(origin,(int(x+w/2),int(y+h/2)),margin*2.5,200,2)
+            test2 = np.zeros_like(origin)
+            cv2.rectangle(test2,(x,y),(x+w,y+h),(255),1)
+            cv2.rectangle(origin,(x,y),(x+w,y+h),(255),1)
+            c2 = np.nonzero(test2)
+            c22 = np.transpose(c2)
+            rectangles.append(map(tuple,c22))
+            
+            
+            
+            
+#             mark object
+#             for i in range(0,len(BND)-1):
+#                 cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
+                
+        iMax = area.index(max(area))
+        
+        common = []
+        if len(circles) > 0:
+            for c in circles:
+                print 'common points'
+                common_points = set(rectangles[iMax]).intersection(c)
+                if len(common_points)>0:
+                    print 'YES'
+                    common.append(c)
+                    
+                else:
+                    print 'NO'
+        points = rectangles[iMax]            
+        for c in common:
+            points = points + c
+        
+        BND2 = np.asarray([[(y,x) for (x,y) in points]])
+#         print BND2
+        x,y,w,h = cv2.boundingRect(BND2)
+        cv2.rectangle(origin,(x,y),(x+w,y+h),(255),3) 
+        
+        padding = int ( w*0.1 )
+        print 'width:', padding
+        return (x ,y-padding,w,h)
+                                   
+#             for j in small:
+#                 x,y,w,h = rects[j]
+#                 xx,yy,ww,hh = rects[iMax]
+#                 if (
+#                     xx < x < xx + ww and (
+#                                           abs(y - yy) < margin * 2.5 or abs(y - (yy+hh)) < margin * 2.5
+#                                           ) 
+#                     ) or ( 
+#                           yy < y < yy + hh and (
+#                                                 abs(x - xx) < margin * 2.5 or abs(x - (xx+ww)) < margin * 2.5
+#                                                 )
+#                           ):
+#                     appendix.append(j)
+                    
+        
+#         for i in appendix:
+#             x,y,w,h = rects[i]
+#             cv2.circle(origin,(int(x+w/2),int(y+h/2)),int(margin*2.5),200,1)
+#             print 'small:', rects[i]
+            
+#         print 'big', rects[iMax]
+#         BND = objects[iMax]
+#         for i in range(0,len(BND)-1):
+#             mark.drawMain(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]))
+        
+        f = '../img/results/automated/%d/objects/%d_objects_on_mirror_A_color_%s.jpg' % (folder, pic,letter)
+        print 'savaing to ' + f
+#         cv2.imwrite(f, colorSpace)
+                   
+        f = '../img/results/automated/%d/objects/%d_objects_on_mirror_A2_color_%s.jpg' % (folder, pic,letter)
+        print 'savaing to ' + f
+        cv2.imwrite(f, origin)
     
     def findMirror(self, folder, pic):
         i = pic
@@ -73,7 +222,8 @@ class ObjectLocalizationTest(unittest.TestCase):
         print scene.view.shape
         print mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid                                    ,md.calculatePointOnLine(mid)[1]
         print '====='
-        k = 25
+        k = 127
+        k = 1
         kernel = np.ones((k,k))
         dilated = cv2.dilate(md.edges_mask,kernel)
         edge = np.where(dilated>0,255,0)
@@ -89,16 +239,21 @@ class ObjectLocalizationTest(unittest.TestCase):
         zoneC = self.setMargin(zoneC, margin)
         zoneD = self.setMargin(zoneD, margin)
         
-        cd = ContourDetector(zoneA.preview)
-        contours = cd.findContours()
-        objects = cd.findObjects(contours)
+        origin = zoneA.image
+        (x,y,w,h) = self.findObject(origin, folder, pic,'A')
+        zoneA = Zone(scene.view,x+zoneA.offsetX,y+zoneA.offsetY,w,h)
         
-        for BND in objects:
-            for i in range(0,len(BND)-1):
-                mark.drawMain(zoneA.preview,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]))
+        origin = zoneB.image
+        (x,y,w,h) = self.findObject(origin, folder, pic,'B')
+        zoneB = Zone(scene.view,x+zoneB.offsetX,y+zoneB.offsetY,w,h)
         
+        origin = zoneC.image
+        (x,y,w,h) = self.findObject(origin, folder, pic,'C')
+        zoneC = Zone(scene.view,x+zoneC.offsetX,y+zoneC.offsetY,w,h)
         
-        
+        origin = zoneD.image
+        (x,y,w,h) = self.findObject(origin, folder, pic,'D')
+        zoneD = Zone(scene.view,x+zoneD.offsetX,y+zoneD.offsetY,w,h)
         
         f = '../img/results/automated/%d/%d_objects_on_mirror_A.jpg' % (folder, i)
         print 'savaing to ' + f

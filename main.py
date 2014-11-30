@@ -305,5 +305,18 @@ def run():
 
     ch = cv2.waitKey()
     
+def run2():
+    
+#     load_image()
+#     
+#     get_edges()
+#     
+#     separate_views()
+#     
+#     find_objects()
+#     
+#     analise_objects()
+    
+    pass
     
 run()

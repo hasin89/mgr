@@ -25,7 +25,7 @@ class TreeColorsTest(unittest.TestCase):
         pass
     
     
-    def tes1tGrabCut(self):
+    def testGrabCut(self):
         
         folder = 8
         i= 3

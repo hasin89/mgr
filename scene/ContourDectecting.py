@@ -98,8 +98,8 @@ class ContourDetector():
                     contours[0].extend(contours[n[0]])
                     contours[n[0]] = []
     
-        print "ilosc"
-        print len(contours)
+#         print "ilosc"
+#         print len(contours)
     
         return contours
     
@@ -181,7 +181,7 @@ class ContourDetector():
     
     
     def searchNearBy(self,edge,x,y):
-        print 'search'
+#         print 'search'
         sp = edge.T.shape
     
         maskSizes = range(5,19,2)
@@ -399,6 +399,7 @@ class ContourDetector():
         '''
     
         rectangles = []
+        areas = []
         tmpbinary = np.zeros(self.shape,dtype='uint8')
         tmpbinary[:][:] = 0
     
@@ -419,8 +420,8 @@ class ContourDetector():
                 rectangles.append((rectangle))
     
         # narysuj białe obszary - w ten obszary stykające się lub nakładaące zleją sie w jeden obszar
-    
-        margin = 10
+        margin = int(round(tmpbinary.shape[1]*0.04,0))
+        #margin = 70 #50 #10
     
         for r in rectangles:
             A = (r[0][0][0]-margin,r[0][0][1]-margin)
@@ -431,7 +432,7 @@ class ContourDetector():
             #znajdź kontury wśród białych prostokątów na czarnym tle
         cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
     
-        return cntTMP
+        return cntTMP,margin
     
     
     def findMainObject(self,objectsCNT,img=0):

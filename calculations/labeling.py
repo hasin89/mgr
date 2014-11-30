@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from drawings.Draw import getColors
 
 class LabelFactory(object):
     
@@ -11,62 +12,18 @@ class LabelFactory(object):
     #tablica etykiet
     L = None
     
-    def __init__(self,binary):
-        binary[0,:] = 0
-        binary[-1,:] = 0
-        binary[:,0] = 0
-        binary[:,-1] = 0
-        self.binary = binary
-        
-        self.currentLabel = 1
+    def __init__(self,binary):#,binary):
+#         binary[0,:] = 0
+#         binary[-1,:] = 0
+#         binary[:,0] = 0
+#         binary[:,-1] = 0
+#         self.binary = binary
+#         
+#         self.currentLabel = 1
         self.L = np.zeros_like(binary)
+        pass
         
-    def run(self,binary):
-        currentLabel = 1
-        L = np.zeros_like(binary)
-        
-        
-        copy = self.copy
-        copy2 = self.copy2
-        
-        foreground = np.nonzero(binary)
-        
-        for y,x in np.nditer(foreground):
-            
-
-            a = (y-1,x-1) 
-            b = (y-1,x)
-            c = (y-1,x+1)
-            d = (y,x-1)
-            e = (y,x)
-            
-            #b
-            if binary[b]:
-                copy(e, b)
-            #c
-            elif binary[c]:
-                #a
-                if binary[a]:
-                    copy2(e, c, a)
-                #d
-                elif binary[d]:
-                    copy2(e, c, d)
-                else:
-                    copy(e, c)
-            
-            #a
-            elif binary[a]:
-                copy(e, a)    
-            
-            #d
-            elif binary[d]:
-                copy(e, d)
-            
-            else:
-                # set current label
-                currentLabel = currentLabel + 1
-                self.L[e] = currentLabel
-                self.P[currentLabel] = currentLabel
+    
         
     def run2(self):
         
@@ -95,30 +52,7 @@ class LabelFactory(object):
             
             pe = (y,x)
             
-            #b
-            if b == 1:
-                self.copy(pe, pb)
-            #c
-            elif c == 1:
-                #a
-                if a == 1:
-                    self.copy2(pe, pc, pa)
-                #d
-                elif d == 1:
-                    self.copy2(pe, pc, pd)
-                else:
-                    self.copy(pe, pc)
             
-            #a
-            elif a == 1:
-                self.copy(pe, pa)    
-            
-            #d
-            elif d == 1:
-                self.copy(pe, pd)
-            
-            else:
-                self.newLabel(pe)
             
     def newLabel(self,point):
         self.currentLabel = self.currentLabel + 1
@@ -159,11 +93,19 @@ class LabelFactory(object):
         return root1
             
     def flattenLabels(self):
-        
-        pass
+        P = self.P
+        k = 2
+        for label in range(2,len(self.P)+2):
+            if P[label] < label:
+                j = P[label]
+                P[label] = P[j]
+            else:
+                P[label] = k
+                k = k + 1
+        self.P = P
     
     def flatten(self):
-        for i in range(len(self.P)):
+        for i in range(2,len(self.P)+2):
             self.P[i] = self.P[self.P[i]]
             
     #decision tree
@@ -174,4 +116,94 @@ class LabelFactory(object):
     def copy2(self,currentPoint,point1,point2):
         self.L[currentPoint] = self._union(self.L[point1], self.L[point2])
         
+    def run(self,binary):
+        binary[0,:] = 0
+        binary[-1,:] = 0
+        binary[:,0] = 0
+        binary[:,-1] = 0
+        currentLabel = 1
+        L = np.zeros_like(binary)
+        
+        
+        copy = self.copy
+        copy2 = self.copy2
+        
+        foreground = np.nonzero(binary)
+        
+        for y,x in np.nditer(foreground):
+            
+            a = (y-1,x-1) 
+            b = (y-1,x)
+            c = (y-1,x+1)
+            d = (y,x-1)
+            e = (y,x)
+            
+            #b
+            if binary[b]:
+                copy(e, b)
+            #c
+            elif binary[c]:
+                #a
+                if binary[a]:
+                    copy2(e, c, a)
+                #d
+                elif binary[d]:
+                    copy2(e, c, d)
+                else:
+                    copy(e, c)
+            
+            #a
+            elif binary[a]:
+                copy(e, a)    
+            
+            #d
+            elif binary[d]:
+                copy(e, d)
+            
+            else:
+                # set current label
+                currentLabel = currentLabel + 1
+                self.L[e] = currentLabel
+                self.P[currentLabel] = currentLabel
+                
+    def flattenMap(self):
+        P = self.P
+        L = self.L
+        for k,v in P.iteritems():
+            L = np.where(L == k,v,L)
+        self.L = L
+        
+    def getPreview(self):
+        
+        self.flattenMap()
+        
+        L = self.L
+        
+        uni =  np.unique(L)
+        colorSpace = np.zeros((L.shape[0],L.shape[1],3),dtype='uint8')
+        colors = getColors(len(uni))
+        
+        tempspace1 = L.copy()
+        for i in range(0,len(uni)):
+            if uni[i] == 0:
+                continue
+            tempspace = np.where(tempspace1 == uni[i],1,0)
+            ids = np.nonzero(tempspace)
+            colorSpace[ids] = colors[i]
+            
+        return colorSpace
+    
+    def convert2ContoursForm(self):
+        contours = {}
+        L = self.L
+        uni =  np.unique(L)
+        for i in range(0,len(uni)):
+            if uni[i] == 0:
+                continue
+            tempspace = np.where(L == uni[i],1,0)
+            ids = np.nonzero(tempspace)
+            
+            li = np.transpose(ids)
+            contours[i] = map(tuple,li)
+        return contours
         
