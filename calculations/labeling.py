@@ -3,6 +3,7 @@
 
 import numpy as np
 from drawings.Draw import getColors
+from skimage import measure
 
 class LabelFactory(object):
     
@@ -207,3 +208,45 @@ class LabelFactory(object):
             contours[i] = map(tuple,li)
         return contours
         
+# funkcja liczaca powierzchnie etykiet otrzmnaych z innego framworku
+    def getBackgroundLabel(self,res,treshold=50,add_to_biggest=True):
+        '''
+            zwraca mape etykiet, liste etykiet i etykiete tla
+            filtruje etykiety mniejsze niz treshold i przypisuje im etykiete tla (jesli flaga == True)
+        '''
+        uni =  np.unique(res)
+        
+        counts = []
+        for k,j in enumerate(uni):
+            if j == -1:
+                continue
+            count = np.where(res == j,1,0)
+            a = np.count_nonzero(count)
+            # ignore meaningless labels
+            if a < treshold:
+                # save these points as background color
+                res = np.where(res == j,-2,res)
+                a = 0
+            counts.append(a)
+        
+        labelsI = np.nonzero(counts)[0]
+        
+        # find the background label
+        maxI = np.argmax(counts)
+        
+        # save these points as background color (now there is the background label number known)
+        if add_to_biggest:
+            res = np.where(res == -2,maxI,res)
+        else:
+            res = np.where(res == -2,-1,res)
+        return res, labelsI, maxI
+    
+    def getLabelsExternal(self,map,neighbors,background):
+        '''
+            dokonuje etykietyzacji za pomoca zewnetrzej biblioteki
+        '''
+        LabelsMap = measure.label(map,neighbors=8,background=0)
+        LabelsMap = np.asarray(LabelsMap)
+        LabelsMap.reshape(LabelsMap.shape[0],LabelsMap.shape[1],1)
+        
+        return LabelsMap

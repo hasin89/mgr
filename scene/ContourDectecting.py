@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from math import sqrt
 from spottedObject import spottedObject
+from calculations.labeling import LabelFactory
 
 __author__ = 'tomek'
 #/usr/bin/env python
@@ -8,11 +9,11 @@ __author__ = 'tomek'
 '''
 
 '''
-
 import cv2
 import numpy as np
 import analyticGeometry as an
-
+from skimage import morphology
+from skimage import measure
 
 class ContourDetector():
     
@@ -480,4 +481,51 @@ def getLongest(contours):
             longestContour = contours[cindex]
     
     return longestContour
+ 
+ 
+def transfromEdgeMaskIntoEdges(edgeMask):
+    '''
+        szkieletyzacja maski konturow
+    '''
+    edges = morphology.skeletonize(edgeMask > 0)
+    edges = edges.astype('uint8')
+    return edges
+     
+     
+class ObjectContourDetector():
+    '''
+        analizuje szkielet do postaci konturow
+    '''
+    
+    
+    def __init__(self,skeleton):
+        self.skeleton = skeleton
+    
+    
+    def fragmentation(self,skeleton):
+        '''
+            divide skeleton but the nodes
+        '''
+        points = np.nonzero(skeleton)
+        points = np.transpose(points)
+        nodes = []
+        #znajdz wezly czyli punkty gdzie punkt ma wiecej niz 2 sasiadow
+        for p in points:
+            y = p[0]
+            x = p[1]
+            mask = skeleton[y-1:y+2,x-1:x+2]
+            ones = np.nonzero(mask)
+            neibours = ones[0].size
+            if neibours>3:
+                nodes.append((y,x))
+            pass
+        skeleton2 = skeleton.copy()
+        for node in nodes:
+            skeleton2[node] = 0
         
+        #etykietyzacja krawedzi        
+        lf = LabelFactory([])
+        edgeLabelsMap = lf.getLabelsExternal(skeleton2, neighbors=8, background=0)
+        edgeLabelsMap,edgeLabels,maxIT = lf.getBackgroundLabel(edgeLabelsMap,11,False)
+        
+        return skeleton2, edgeLabelsMap, edgeLabels, nodes

@@ -21,7 +21,7 @@ class edgeDetector(object):
     
         
     def __init__(self,image,gauss_kernel = 5):
-        self.image = cv2.GaussianBlur(self.image, (gauss_kernel, gauss_kernel), 0)
+        self.image = cv2.GaussianBlur(image, (gauss_kernel, gauss_kernel), 0)
     
 
     def SobelChanel(self,color):
