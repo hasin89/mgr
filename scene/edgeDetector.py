@@ -20,12 +20,14 @@ class edgeDetector(object):
     
     
         
-    def __init__(self,image,gauss_kernel = 5):
-        self.image = cv2.GaussianBlur(image, (gauss_kernel, gauss_kernel), 0)
-    
+    def __init__(self,image,gauss_kernel=5):
+        gauss_kernel = 5
+        self.image = image
+        self.blur = cv2.GaussianBlur(image, (gauss_kernel, gauss_kernel), 0)
+        
 
     def SobelChanel(self,color):
-        image = self.image
+        image = self.blur
         
         if color == 'R':
             chanel = 2
@@ -82,7 +84,6 @@ class edgeDetector(object):
         
         final = cv2.add(b0,g0)
         final = cv2.add(final,r0)
-        
         
         mask = np.where(final>0,1,0).astype('uint8')
         

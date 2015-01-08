@@ -241,11 +241,11 @@ class LabelFactory(object):
             res = np.where(res == -2,-1,res)
         return res, labelsI, maxI
     
-    def getLabelsExternal(self,map,neighbors,background):
+    def getLabelsExternal(self,mask,neighbors=8,background=0):
         '''
             dokonuje etykietyzacji za pomoca zewnetrzej biblioteki
         '''
-        LabelsMap = measure.label(map,neighbors=8,background=0)
+        LabelsMap = measure.label(mask,neighbors,background)
         LabelsMap = np.asarray(LabelsMap)
         LabelsMap.reshape(LabelsMap.shape[0],LabelsMap.shape[1],1)
         

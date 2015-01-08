@@ -25,27 +25,39 @@ class QubicObject(object):
         emptyImage[:] = (0,0,0)
         self.emptyImage = emptyImage
         
-        self.edgeMask = self.getEdges()
+        edgeMask = self.getEdges()
+        self.edgeMask = edgeMask
         
-        walls, labelsMap, backgroundLabel, labels = self.findWalls(self.edgeMask)
+        walls, labelsMap, backgroundLabel, labels = self.findWalls(edgeMask)
+        
         
         self.labelsMap = labelsMap
         self.labels = labels
         self.backgroundLabel = backgroundLabel
-        
+         
         self.walls = walls
-        
-        self.findContours()
+         
+        skeleton2, edgeLabelsMap, edgeLabels, nodes  = self.findContours()
+        self.skeleton2 = skeleton2
         
     
     def getEdges(self):
         '''
             zwraca krawdedzie wykryte kolorowym operatorem Sobela
         '''
+#         gauss_kernel = 5
+#         img = cv2.GaussianBlur(self.image, (gauss_kernel, gauss_kernel), 0)
         ed = edgeDetector.edgeDetector(self.image)
-        self.edgeMask = ed.getSobel()
+        edgeMask = ed.getSobel()
         
-        return self.edgeMask
+        ei = self.emptyImage.copy()
+        ei[:] = (0,0,0)
+        ei[edgeMask > 0] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_sobel_2.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
+        
+        return edgeMask
     
     def openOperation(self,res,label,kernelSize = 3):
         background = np.where(res == label ,255,0).astype('uint8')
@@ -72,8 +84,20 @@ class QubicObject(object):
         #znalezienie tla
         labelsMap,labels,backgroundLabel = lf.getBackgroundLabel(res)
         
+        ei = self.emptyImage.copy()
+        ei[labelsMap == backgroundLabel] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_background_2.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
+        
         #operacja otwarcia na tle - eliminacja dorbnych zaklucen
         labelsMap = self.openOperation(labelsMap, backgroundLabel, kernelSize=5)
+        
+        ei = self.emptyImage.copy()
+        ei[labelsMap == backgroundLabel] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_open_b_2.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
         
         walls = {}
         
@@ -91,13 +115,23 @@ class QubicObject(object):
             
             walls[label] = w
         
-        self.edgeMask = np.where(labelsMap == -1,0,1).astype('uint8')
+        self.edgeMask = np.where(labelsMap == -1,1,0).astype('uint8')
         
         return walls, labelsMap, backgroundLabel, labels
 
     
     def findContours(self):
-        edges = ContourDectecting.transfromEdgeMaskIntoEdges(self.edgeMask)
+        ei = self.emptyImage.copy()
+        ei[:] = (0,0,0)
+        ei[self.edgeMask > 0] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_to_skeleton_2.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
+        edges = ContourDectecting.transfromEdgeMaskIntoEdges(self.edgeMask,self.emptyImage)
+        
+        
+        
         ocd = ContourDectecting.ObjectContourDetector(edges)
-        r = ocd.fragmentation(ocd.skeleton) 
-        return r    
+        skeleton2, edgeLabelsMap, edgeLabels, nodes = ocd.fragmentation(ocd.skeleton) 
+        self.skeleton2 = skeleton2
+        return skeleton2, edgeLabelsMap, edgeLabels, nodes    

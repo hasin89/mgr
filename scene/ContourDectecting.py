@@ -483,12 +483,22 @@ def getLongest(contours):
     return longestContour
  
  
-def transfromEdgeMaskIntoEdges(edgeMask):
+def transfromEdgeMaskIntoEdges(edgeMask,emptyImage):
     '''
         szkieletyzacja maski konturow
     '''
     edges = morphology.skeletonize(edgeMask > 0)
     edges = edges.astype('uint8')
+    
+    ei = emptyImage.copy()
+    ei[:] = (0,0,0)
+    ei[edges == 1] = (255,255,255)
+    f = '../img/results/automated/9/objects2/debug/skeleton2.jpg' 
+    print 'savaing to ' + f
+    cv2.imwrite(f, ei)
+    a/2
+        
+        
     return edges
      
      
