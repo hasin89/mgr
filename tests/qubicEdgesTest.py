@@ -353,14 +353,28 @@ class QubicEdgesTest(unittest.TestCase):
                     
                     edgesMap2[indexes] = 1
                     
+                    
+                    
         return image6,edgesMap2,contours
     
-    
-    def proceed(self,img,mask,folder, i, letter):
+    def getSobel(self,img,folder, i, letter):
         pic = i
+        gauss_kernel = 5
+        img = cv2.GaussianBlur(img, (gauss_kernel, gauss_kernel), 0)
+        ed = edgeDetector.edgeDetector(img)
+        
+        r0 = ed.SobelChanel('R')
+        g0 = ed.SobelChanel('G')
+        b0 = ed.SobelChanel('B')
+        
+        fin = cv2.add(b0,g0)
+        fin = cv2.add(fin,r0)
+        
         image = img.copy()
         #caly bialy
-        image[mask > -1] = (0,0,0)
+        image[fin > -1] = (0,0,0)
+        
+        mask = np.where(fin>0,1,0).astype('uint8')
         
         CNTmask = mask.copy()
         
@@ -435,11 +449,10 @@ class QubicEdgesTest(unittest.TestCase):
         
         mask2,resT,labelsT,nodes = self.fragmentation(mask2)
         
-        
+        image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
         
                     
         for wall_label,dist_map in area_dists.iteritems():
-            image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
                     
 #                     cv2.circle(image6,(contour[0][1],contour[0][0]),2,(100,15,255),-1)
 #                     cv2.circle(image6,(contour[-1][1],contour[-1][0]),2,(100,15,255),-1)
@@ -469,10 +482,10 @@ class QubicEdgesTest(unittest.TestCase):
 #                     cv2.line(image6, (line[0],line[1]), (line[2],line[3]), (128,0,128), 1)
             
             if lines is not None and len(lines[0])>0:
-                mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
+#                 mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
                 pass
             
-#             image6 = self.interpolate(image6, contours[wall_label])
+            image6 = self.interpolate(image6, contours[wall_label])
             
             edgesMap3 = CNTmask.copy()
             edgesMap3[:] = 0
@@ -669,21 +682,10 @@ class QubicEdgesTest(unittest.TestCase):
         zoneC = self.loadZone(folder, pic,'C')
         zoneD = self.loadZone(folder, pic,'D')
         
-        ed = edgeDetector.edgeDetector(zoneA.view)
-        mask = ed.getSobel()
-        imgA,maskA = self.proceed(zoneA.view,mask,folder, i,'A')
-        
-        ed = edgeDetector.edgeDetector(zoneB.view)
-        mask = ed.getSobel()
-        imgB,maskB = self.proceed(zoneB.view,mask,folder, i,'B')
-        
-        ed = edgeDetector.edgeDetector(zoneC.view)
-        mask = ed.getSobel()
-        imgC,maskC = self.proceed(zoneC.view,mask,folder, i,'C')
-        
-        ed = edgeDetector.edgeDetector(zoneD.view)
-        mask = ed.getSobel()
-        imgD,maskD = self.proceed(zoneD.view,mask,folder, i,'D')
+        imgA,maskA = self.getSobel(zoneA.view,folder, i,'A')
+        imgB,maskB = self.getSobel(zoneB.view,folder, i,'B')
+        imgC,maskC = self.getSobel(zoneC.view,folder, i,'C')
+        imgD,maskD = self.getSobel(zoneD.view,folder, i,'D')
         
         
         mask = maskA
