@@ -128,8 +128,8 @@ class ObjectLocalizationTest(unittest.TestCase):
             
             
 #             mark object
-#             for i in range(0,len(BND)-1):
-#                 cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
+            for i in range(0,len(BND)-1):
+                cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
                 
         iMax = area.index(max(area))
         
@@ -144,18 +144,51 @@ class ObjectLocalizationTest(unittest.TestCase):
                     
                 else:
                     print 'NO'
-        points = rectangles[iMax]            
+        points = rectangles[iMax]  
+        print rects          
         for c in common:
             points = points + c
         
-        BND2 = np.asarray([[(y,x) for (x,y) in points]])
+        if points is not None:
+            BND2 = np.asarray([[(y,x) for (x,y) in points]])
 #         print BND2
-        x,y,w,h = cv2.boundingRect(BND2)
-        cv2.rectangle(origin,(x,y),(x+w,y+h),(255),3) 
+            x,y,w,h = cv2.boundingRect(BND2)
+            cv2.rectangle(origin,(x,y),(x+w,y+h),(255),5) 
+        else:
+            f = '../img/results/automated/%d/objects/%d_objects_on_mirror_A2_color_%s.jpg' % (folder, pic,letter)
+            print 'savaing to ' + f
+            cv2.imwrite(f, origin)
+            return (0,0,0,0)
         
         padding = int ( w*0.1 )
         print 'width:', padding
-        return (x ,y-padding,w,h)
+        Y = y-padding
+        
+        #dodawanie oderwanych czesci duzych kwadratow
+        maxi = rects[iMax]
+        print 'first ROI:', area[iMax]
+        if len(area)>1:
+            area[iMax] = None
+            iMax2 = area.index(max(area))
+            
+            if area[iMax2] != None:
+                print 'second ROI:', area[iMax2]
+                midi = rects[iMax2]
+                
+                if midi[0]>maxi[0] and midi[1]<maxi[1] and midi[2]<maxi[2]:
+                    print 'Upper part'
+                    print 'distance', abs(maxi[1] - midi[1]-midi[3] )
+                    Y = midi[1]
+                    print Y
+                    h += midi[3] + abs(maxi[1] - midi[1]-midi[3] )
+                print midi
+                print maxi
+            
+        f = '../img/results/automated/%d/objects/%d_objects_on_mirror_A2_color_%s.jpg' % (folder, pic,letter)
+        print 'savaing to ' + f
+        cv2.imwrite(f, origin)
+        
+        return (x ,Y,w,h)
                                    
 #             for j in small:
 #                 x,y,w,h = rects[j]
@@ -186,9 +219,7 @@ class ObjectLocalizationTest(unittest.TestCase):
         print 'savaing to ' + f
 #         cv2.imwrite(f, colorSpace)
                    
-        f = '../img/results/automated/%d/objects/%d_objects_on_mirror_A2_color_%s.jpg' % (folder, pic,letter)
-        print 'savaing to ' + f
-        cv2.imwrite(f, origin)
+        
     
     def findMirror(self, folder, pic):
         i = pic
@@ -227,6 +258,10 @@ class ObjectLocalizationTest(unittest.TestCase):
         kernel = np.ones((k,k))
         dilated = cv2.dilate(md.edges_mask,kernel)
         edge = np.where(dilated>0,255,0)
+        
+        f = '../img/results/automated/%d/%d_edge.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, edge)
         
         zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
         zoneB =  Zone(edge,   mid                 ,mirror_zone.offsetY                                ,mirror_zone.offsetX+mirror_zone.width-mid                  ,md.calculatePointOnLine(mirror_zone.offsetX+mirror_zone.width)[1]-mirror_zone.offsetY)
@@ -270,22 +305,63 @@ class ObjectLocalizationTest(unittest.TestCase):
         f = '../img/results/automated/%d/%d_objects_on_mirror_D.jpg' % (folder, i)
         print 'savaing to ' + f
         cv2.imwrite(f, zoneD.preview)
+        
+        f = '../img/results/automated/%d/objects2/%d_objects_on_mirror_A.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, zoneA.image)
+        
+        f = '../img/results/automated/%d/objects2/%d_objects_on_mirror_B.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, zoneB.image)
+        
+        f = '../img/results/automated/%d/objects2/%d_objects_on_mirror_C.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, zoneC.image)
+        
+        f = '../img/results/automated/%d/objects2/%d_objects_on_mirror_D.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, zoneD.image)
+        
+        f = '../img/results/automated/%d/%d_view.jpg' % (folder, i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, scene.view)
             
 
-    def test_8_3(self):
-        self.findMirror(8, 3)
+    def test_9_11(self):
+        self.findMirror(9, 11)
+         
+    def test_9_10(self):
+        self.findMirror(9, 10)   
         
-    def test_8_6(self):
-        self.findMirror(8, 6)   
+    def test_9_8(self):
+        self.findMirror(9, 8)
         
-    def test_8_7(self):
-        self.findMirror(8, 7) 
-    
-    def test_8_19(self):
-        self.findMirror(8, 19) 
+    def test_9_7(self):
+        self.findMirror(9, 7)
+        
+    def test_9_6(self):
+        self.findMirror(9, 6)
+        
+    def test_9_5(self):
+        self.findMirror(9, 5)
+        
+    def test_9_4(self):
+        self.findMirror(9, 4)    
+        
+    def test_9_3(self):
+        self.findMirror(9, 3) 
 
-    def test_8_77(self):
-        self.findMirror(8, 77)
+    def test_9_2(self):
+        self.findMirror(9, 2)
+        
+    def test_9_1(self):
+        self.findMirror(9, 1)    
+    
+#     def test_8_19(self):
+#         self.findMirror(8, 19) 
+# 
+#     def test_8_77(self):
+#         self.findMirror(8, 77)
 
 #     def test_7_1(self):
 #         self.findMirror(7, 1)   

@@ -148,8 +148,10 @@ class objectDetector2(object):
             c22 = np.transpose(c2)
             rectangles.append(map(tuple,c22))
             
-            
-                
+#       mark object DEBUG
+#         for i in range(0,len(BND)-1):
+#             cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
+                    
         iMax = area.index(max(area))
         
         common = []
@@ -173,5 +175,22 @@ class objectDetector2(object):
         
         padding = int ( w*0.1 )
         
-        return (x ,y-padding,w,h)
+        Y = y-padding
+        
+        # ewentualne dodawanie oderwanych czesci duzych kwadratow
+        maxi = rects[iMax]
+        
+        if len(area)>1:
+            area[iMax] = None
+            iMax2 = area.index(max(area))
+            
+            if area[iMax2] != None:
+        
+                midi = rects[iMax2]
+                
+                if midi[0]>maxi[0] and midi[1]<maxi[1] and midi[2]<maxi[2]:
+                    Y = midi[1]
+                    h += midi[3] + abs(maxi[1] - midi[1]-midi[3] )
+                    
+        return (x ,Y,w,h)
    

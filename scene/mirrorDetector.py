@@ -161,10 +161,29 @@ class mirrorDetector(object):
     
     
     def findMirrorZone(self):
+        
+        shift = 100
+        
+        left, right = self.__findVerticalEdges(shift)
+        
+        if left == 0 or right == self.scene.width:
+            shift = shift + 5
+            left, right = self.__findVerticalEdges(shift)
+           
+        theta = 0
+        mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
+        
+        mirrorZone = Zone(self.scene.view,left,0,right-left,self.scene.height)
+        self.mirrorZone=  mirrorZone
+        
+        return self.mirrorZone
+    
+    def __findVerticalEdges(self,shift):
         #narysuj kreske na pustym obrazie
         canvas = np.zeros_like(self.edges_mask)
         
-        mark.drawHoughLines([(self.mirror_line_Hough[0]-100,self.mirror_line_Hough[1])], canvas, 1, 5)
+        mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], canvas, 1, 5)
+        mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], self.scene.view, 1, 5)
         
         output = canvas*self.edges_mask
         
@@ -188,12 +207,6 @@ class mirrorDetector(object):
         else:
             left = 0
         
-#         theta = 0
-#         mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
-        
-        mirrorZone = Zone(self.scene.view,left,0,right-left,self.scene.height)
-        self.mirrorZone=  mirrorZone
-        
-        return self.mirrorZone
+        return left,right
         
 #         

@@ -256,7 +256,7 @@ def crossProduct(k,l):
     return (x,y,z)
 
 
-def calcDistances(segment,size):
+def calcDistances(segment,size,treshold=2):
     '''
         liczy odległość punktów odcinka od odcinka z
     '''
@@ -296,7 +296,7 @@ def calcDistances(segment,size):
 
             # jesli dystans jest większy niż 2
 
-            if dist>2:
+            if dist>treshold:
 
                 #zapisz index punktu oraz jego odległość
 

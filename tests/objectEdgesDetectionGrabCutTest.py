@@ -143,22 +143,24 @@ class ObjectEdgesTest(unittest.TestCase):
 #         f = '../img/results/automated/%d/objects2/%d_objects_on_mirror_D.jpg' % (folder, i)
 #         print 'savaing to ' + f
 #         cv2.imwrite(f, zoneD.image)
-            
-
-    def test_8_3(self):
-        self.findMirror(8, 3)
-        
-    def test_8_6(self):
-        self.findMirror(8, 6)   
-        
-    def test_8_7(self):
-        self.findMirror(8, 7) 
     
-    def test_8_19(self):
-        self.findMirror(8, 19) 
+    def test_9_8(self):
+        self.findMirror(9, 8)           
 
-    def test_8_77(self):
-        self.findMirror(8, 77)
+#     def test_8_3(self):
+#         self.findMirror(8, 3)
+#         
+#     def test_8_6(self):
+#         self.findMirror(8, 6)   
+#         
+#     def test_8_7(self):
+#         self.findMirror(8, 7) 
+#     
+#     def test_8_19(self):
+#         self.findMirror(8, 19) 
+# 
+#     def test_8_77(self):
+#         self.findMirror(8, 77)
 
 #     def test_7_1(self):
 #         self.findMirror(7, 1)   
