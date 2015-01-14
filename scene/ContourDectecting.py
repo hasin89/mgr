@@ -487,19 +487,21 @@ def transfromEdgeMaskIntoEdges(edgeMask,emptyImage):
     '''
         szkieletyzacja maski konturow
     '''
-    edges = morphology.skeletonize(edgeMask > 0)
+    edges = morphology.skeletonize(edgeMask)
     edges = edges.astype('uint8')
+    
+    edges2 = morphology.skeletonize(edges)
+    edges2 = edges2.astype('uint8')
     
     ei = emptyImage.copy()
     ei[:] = (0,0,0)
-    ei[edges == 1] = (255,255,255)
+    ei[edges2 == 1] = (255,255,255)
     f = '../img/results/automated/9/objects2/debug/skeleton2.jpg' 
     print 'savaing to ' + f
     cv2.imwrite(f, ei)
-    a/2
         
         
-    return edges
+    return edges2
      
      
 class ObjectContourDetector():

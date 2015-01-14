@@ -9,6 +9,7 @@ import cv2
 from calculations.labeling import LabelFactory
 from wall import Wall
 import ContourDectecting
+from contour import Contour
 
 class QubicObject(object):
     '''
@@ -25,20 +26,25 @@ class QubicObject(object):
         emptyImage[:] = (0,0,0)
         self.emptyImage = emptyImage
         
+        self.emptyMask = np.zeros(self.image.shape[:2],dtype='uint8')
+        
         edgeMask = self.getEdges()
         self.edgeMask = edgeMask
         
         walls, labelsMap, backgroundLabel, labels = self.findWalls(edgeMask)
-        
-        
         self.labelsMap = labelsMap
         self.labels = labels
         self.backgroundLabel = backgroundLabel
-         
         self.walls = walls
          
-        skeleton2, edgeLabelsMap, edgeLabels, nodes  = self.findContours()
-        self.skeleton2 = skeleton2
+        skeleton, edgeLabelsMap, edgeLabels, nodes  = self.findContours()
+        self.skeleton = skeleton
+        self.edgeLabelsMap = edgeLabelsMap
+        self.edgeLabels = edgeLabels
+        self.nodes = nodes
+        
+        self.getWallContour(walls,edgeLabels,edgeLabelsMap,nodes)
+        
         
     
     def getEdges(self):
@@ -67,9 +73,6 @@ class QubicObject(object):
         res = np.where(background == 255,label,res)
     
         return res
-    
-
-        
     
     def findWalls(self,edgeMask):
         '''
@@ -119,7 +122,6 @@ class QubicObject(object):
         
         return walls, labelsMap, backgroundLabel, labels
 
-    
     def findContours(self):
         ei = self.emptyImage.copy()
         ei[:] = (0,0,0)
@@ -134,4 +136,36 @@ class QubicObject(object):
         ocd = ContourDectecting.ObjectContourDetector(edges)
         skeleton2, edgeLabelsMap, edgeLabels, nodes = ocd.fragmentation(ocd.skeleton) 
         self.skeleton2 = skeleton2
-        return skeleton2, edgeLabelsMap, edgeLabels, nodes    
+        return skeleton2, edgeLabelsMap, edgeLabels, nodes
+    
+    def getWallsContourAndNodes(self,walls,edgeLabels,edgeLabelsMap,nodes):
+        '''
+        area_dist - mapa dystansu od sciany
+        labelsT - etykiety krawedzi
+        resT - mapa krawedzi zetykietyzowana
+        img - obraz ostateczny
+        Bmap - empty map
+        '''
+        #szukanie konturow nalezacych do scian
+        for wall in walls.iteritems():
+            
+            for edge_label in edgeLabels:
+                
+                indexes = np.where(edgeLabelsMap == edge_label)
+                values = wall.wallDistance[indexes]
+                
+                max_value = np.max(values)
+                min_value = np.max(values)
+                if max_value < 20 and min_value>1:
+                    
+                    c = Contour(edge_label,np.where(edgeLabelsMap == edge_label,1,0))
+                    
+                    wall.contours.append(c)
+                    
+            for node in nodes:
+                value = wall.wallDistance[node]
+                if value < 20:
+                    #node belong to the wall
+                    wall.nodes.append(node)
+                    
+        return walls    

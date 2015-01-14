@@ -13,7 +13,7 @@ class LabelFactory(object):
     #tablica etykiet
     L = None
     
-    def __init__(self,binary):#,binary):
+    def __init__(self,binary=None):#,binary):
 #         binary[0,:] = 0
 #         binary[-1,:] = 0
 #         binary[:,0] = 0
@@ -21,7 +21,8 @@ class LabelFactory(object):
 #         self.binary = binary
 #         
 #         self.currentLabel = 1
-        self.L = np.zeros_like(binary)
+        if binary is not None:
+            self.L = np.zeros_like(binary)
         pass
         
     
@@ -250,3 +251,17 @@ class LabelFactory(object):
         LabelsMap.reshape(LabelsMap.shape[0],LabelsMap.shape[1],1)
         
         return LabelsMap
+    
+    def colorLabels(self,image,labelsMap,background_label = -1):
+        '''
+        kolorowanie etykiet
+        '''
+        uni =  np.unique(labelsMap)
+        colors = getColors(len(uni))
+        for k,j in enumerate(uni):
+            if j == background_label:
+                continue
+            color = np.asarray(colors[k])
+            image[labelsMap == j] = color
+        
+        return image

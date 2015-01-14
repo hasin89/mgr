@@ -5,7 +5,7 @@ Created on Sep 27, 2014
 '''
 import unittest
 import numpy as np
-from calculations import triangulation, DecompPMat
+from calculations import triangulation, DecompPMat, labeling
 import cv2
 import func.trackFeatures as features
 from scene.edge import edgeMap
@@ -39,7 +39,6 @@ class QubicEdgesTest(unittest.TestCase):
 
     def setUp(self):
         np.set_printoptions(precision=4)
-
 
     def tearDown(self):
         np.set_printoptions(precision=6)
@@ -243,39 +242,6 @@ class QubicEdgesTest(unittest.TestCase):
         else:
             return []
     
-    def countFieldOfLabel(self,res,treshold=50,add_to_biggest=True):
-        uni =  np.unique(res)
-        
-        counts = []
-        for k,j in enumerate(uni):
-            if j == -1:
-                continue
-            count = np.where(res == j,1,0)
-            a = np.count_nonzero(count)
-            # ignore meaningless labels
-            if a < treshold:
-                # save these points as background color
-                res = np.where(res == j,-2,res)
-                a = 0
-            counts.append(a)
-        
-        labelsI = np.nonzero(counts)[0]
-        
-        # find the background label
-        maxI = np.argmax(counts)
-        
-#         print counts
-#         print counts[labelsI[0]]
-#         print 'labels', labelsI
-#         print max(counts)
-#         print 'max', maxI
-        
-        # save these points as background color (now there is the background label number known)
-        if add_to_biggest:
-            res = np.where(res == -2,maxI,res)
-        else:
-            res = np.where(res == -2,-1,res)
-        return res, labelsI, maxI
     
     def colorLabels(self,image,res,background_label = -1):
         #kolorowanie etykiet
@@ -313,11 +279,14 @@ class QubicEdgesTest(unittest.TestCase):
         
         uni =  np.unique(resT)
         print 'unique l',uni
-        
-        resT,labelsIT,maxIT = self.countFieldOfLabel(resT,11,False)
+        lf = LabelFactory([])
+        resT,labelsIT,maxIT = lf.getBackgroundLabel(resT,11,False)
         
         uni =  np.unique(resT)
         print 'unique l',uni
+        
+        for node in nodes:
+            skeleton2[node] = 1
         
         return skeleton2, resT ,labelsIT,nodes
     
@@ -353,56 +322,50 @@ class QubicEdgesTest(unittest.TestCase):
                     
                     edgesMap2[indexes] = 1
                     
-                    
-                    
         return image6,edgesMap2,contours
     
-    def getSobel(self,img,folder, i, letter):
+    
+    def proceed(self,img,mask,folder, i, letter):
         pic = i
-        gauss_kernel = 5
-        img = cv2.GaussianBlur(img, (gauss_kernel, gauss_kernel), 0)
-        ed = edgeDetector.edgeDetector(img)
-        
-        r0 = ed.SobelChanel('R')
-        g0 = ed.SobelChanel('G')
-        b0 = ed.SobelChanel('B')
-        
-        fin = cv2.add(b0,g0)
-        fin = cv2.add(fin,r0)
-        
         image = img.copy()
         #caly bialy
-        image[fin > -1] = (0,0,0)
-        
-        mask = np.where(fin>0,1,0).astype('uint8')
+        image[mask > -1] = (0,0,0)
+        image2 = image.copy()
+        image3 = image.copy()
         
         CNTmask = mask.copy()
         
-        distanceTreshold = 1
-#         dst = cv2.distanceTransform(mask,cv2.cv.CV_DIST_C,3)
-#         mask = np.where(dst>distanceTreshold,1,0).astype('uint8')
         
-        
-        kernel = np.ones((3,3),np.uint8)
-        
-#         image = cv2.erode(image,kernel,iterations = 1)
-#         image = cv2.dilate(image,kernel,iterations = 1)
-        
-#         mask = cv2.erode(mask,kernel,iterations = 1)
-#         mask = cv2.dilate(mask,kernel,iterations = 1)
-        
-        image2 = image.copy()
-        image3 = image.copy()
         image[mask == 1] = (255,255,255)
+        
+        ei = image2.copy()
+        ei[mask == 1] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_sobel_1.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
+        
                 
         res = measure.label(mask,neighbors=8,background=1)
         res = np.asarray(res)
         res.reshape(res.shape[0],res.shape[1],1)
         
-        res,labelsI,maxI = self.countFieldOfLabel(res)
+        lf = LabelFactory([])
+        res,labelsI,maxI = lf.getBackgroundLabel(res)
+        
+        ei = image2.copy()
+        ei[res == maxI] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_background_1.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
         
         label = maxI
         res = self.openOperation(res, label, kernelSize=5)
+        
+        ei = image2.copy()
+        ei[res == maxI] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_open_b_1.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
         
         print 'unique', np.unique(res)
         
@@ -416,8 +379,8 @@ class QubicEdgesTest(unittest.TestCase):
                 continue
             res = self.openOperation(res, label, kernelSize=9)
             
-            areaIMG = image.copy()
-            areaIMG[:] = (0,0,0)
+#             areaIMG = image.copy()
+#             areaIMG[:] = (0,0,0)
             area = np.where(res == label ,1,0).astype('uint8')
             
             area2 = np.where(res == label ,0,1).astype('uint8')
@@ -442,17 +405,30 @@ class QubicEdgesTest(unittest.TestCase):
         # szkieletyzacja
         mask[res == maxI] = 0
         edgesMap = np.where(res == -1,1,0).astype('uint8') 
+        
+        ei = image2.copy()
+        ei[edgesMap > 0] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton_to_skeleton_1.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
+        
 #         edgesMap = mask.copy()
         mask2 = morphology.skeletonize(edgesMap > 0)
         mask2 = mask2.astype('uint8') 
         
+        ei = image2.copy()
+        ei[mask2 == 1] = (255,255,255)
+        f = '../img/results/automated/9/objects2/debug/skeleton1.jpg' 
+        print 'savaing to ' + f
+        cv2.imwrite(f, ei)
         
         mask2,resT,labelsT,nodes = self.fragmentation(mask2)
         
-        image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
+        
         
                     
         for wall_label,dist_map in area_dists.iteritems():
+            image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
                     
 #                     cv2.circle(image6,(contour[0][1],contour[0][0]),2,(100,15,255),-1)
 #                     cv2.circle(image6,(contour[-1][1],contour[-1][0]),2,(100,15,255),-1)
@@ -482,10 +458,10 @@ class QubicEdgesTest(unittest.TestCase):
 #                     cv2.line(image6, (line[0],line[1]), (line[2],line[3]), (128,0,128), 1)
             
             if lines is not None and len(lines[0])>0:
-#                 mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
+                mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
                 pass
             
-            image6 = self.interpolate(image6, contours[wall_label])
+#             image6 = self.interpolate(image6, contours[wall_label])
             
             edgesMap3 = CNTmask.copy()
             edgesMap3[:] = 0
@@ -504,7 +480,8 @@ class QubicEdgesTest(unittest.TestCase):
         
         f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_skeleton.jpg' % (folder, pic,letter)
         print 'savaing to ' + f
-        cv2.imwrite(f, image5)
+        image2[skeleton == 1] = (255,255,255)
+        cv2.imwrite(f, image2)
         
         image2[skeleton == 1] = (255,255,255)
 
@@ -682,10 +659,21 @@ class QubicEdgesTest(unittest.TestCase):
         zoneC = self.loadZone(folder, pic,'C')
         zoneD = self.loadZone(folder, pic,'D')
         
-        imgA,maskA = self.getSobel(zoneA.view,folder, i,'A')
-        imgB,maskB = self.getSobel(zoneB.view,folder, i,'B')
-        imgC,maskC = self.getSobel(zoneC.view,folder, i,'C')
-        imgD,maskD = self.getSobel(zoneD.view,folder, i,'D')
+        ed = edgeDetector.edgeDetector(zoneA.view)
+        mask = ed.getSobel()
+        imgA,maskA = self.proceed(zoneA.view,mask,folder, i,'A')
+        
+        ed = edgeDetector.edgeDetector(zoneB.view)
+        mask = ed.getSobel()
+        imgB,maskB = self.proceed(zoneB.view,mask,folder, i,'B')
+        
+        ed = edgeDetector.edgeDetector(zoneC.view)
+        mask = ed.getSobel()
+        imgC,maskC = self.proceed(zoneC.view,mask,folder, i,'C')
+        
+        ed = edgeDetector.edgeDetector(zoneD.view)
+        mask = ed.getSobel()
+        imgD,maskD = self.proceed(zoneD.view,mask,folder, i,'D')
         
         
         mask = maskA
@@ -729,21 +717,21 @@ class QubicEdgesTest(unittest.TestCase):
     def test_9_1(self):
         self.execute(9, 1)
         
-    def test_9_2(self):
-        self.execute(9, 2)
-#         
-    def test_9_3(self):
-        self.execute(9, 3)
-         
-    def test_9_7(self):
-        self.execute(9, 7)
-         
-         
-    def test_9_10(self):
-        self.execute(9, 10)
-     
-    def test_9_11(self):
-        self.execute(9, 11)           
+#     def test_9_2(self):
+#         self.execute(9, 2)
+# #         
+#     def test_9_3(self):
+#         self.execute(9, 3)
+#          
+#     def test_9_7(self):
+#         self.execute(9, 7)
+#          
+#          
+#     def test_9_10(self):
+#         self.execute(9, 10)
+#      
+#     def test_9_11(self):
+#         self.execute(9, 11)           
 
 #     def test_8_3(self):
 #         self.execute(8, 3)
