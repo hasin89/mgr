@@ -7,14 +7,9 @@ import unittest
 import numpy as np
 from calculations import triangulation, DecompPMat, labeling
 import cv2
-import func.trackFeatures as features
-from scene.edge import edgeMap
 import func.markElements as mark
-from scene.analyticGeometry import convertLineToGeneralForm
 from scene.mirrorDetector import mirrorDetector
 from scene.zone import Zone
-from scene.ContourDectecting import ContourDetector
-from scene.ObjectDectecting import ObjectDetector
 
 from scene.objectDetector2 import objectDetector2
 
@@ -31,6 +26,9 @@ from skimage import measure
 
 import func.analise as an
 from math import sqrt
+from scene.wall import Wall
+from scene.qubic import QubicObject
+import calculations
 
 class QubicEdgesTest(unittest.TestCase):
     
@@ -118,111 +116,7 @@ class QubicEdgesTest(unittest.TestCase):
             
         
         return zone
-    
-    def openOperation(self,res,label,kernelSize = 3):
-        background = np.where(res == label ,255,0).astype('uint8')
-        kernel = np.ones((kernelSize,kernelSize),np.uint8)
-        background = cv2.dilate(background,kernel,iterations = 1)
-        background = cv2.erode(background,kernel,iterations = 1)
-        res = np.where(background == 255,label,res)
-    
-        return res
-    
-    def getContour(self,points):
-        contour = []
-        stack = map(tuple,list(points))
-        
-        start = stack[0]
-        p1 = start
-        y,x = p1
-        positions = [ 
-            (y-1,x-1),
-            (y-1,x),
-            (y-1,x+1),
-            (y,x-1),
-            (y,x+1),
-            (y+1,x-1),
-            (y+1,x),
-            (y+1,x+1)
-            ]
-        begining = []
-        for p in positions:
-            if p in stack:
-                i = stack.index(p)
-                p2 = stack.pop(i)
-                begining.append(p2)
-        if len(begining) == 2:
-            contour.insert(len(contour),begining[0])
-            contour.insert(0,begining[1])
-        elif len(begining) ==1:
-            contour.append(begining[0])
-            begining.append(None)
-        
-        p1 = begining[0]
-        while len(stack)>0:
-            y,x = p1
-            positions = [ 
-                (y-1,x-1),
-                (y-1,x),
-                (y-1,x+1),
-                (y,x-1),
-                (y,x+1),
-                (y+1,x-1),
-                (y+1,x),
-                (y+1,x+1)
-                ]
-            counter = 0
-            for p in positions:
-                if p in stack:
-                    i = stack.index(p)
-                    p2 = stack.pop(i)
-                    contour.append(p2)
-                    p1 = p2
-                else:
-                    counter = counter+1
-            if counter == 8:
-                break
             
-        if begining[1] is not None:
-            print 'not none'
-            p1 = begining[1]
-            while len(stack)>0:
-                y,x = p1
-                positions = [ 
-                    (y-1,x-1),
-                    (y-1,x),
-                    (y-1,x+1),
-                    (y,x-1),
-                    (y,x+1),
-                    (y+1,x-1),
-                    (y+1,x),
-                    (y+1,x+1)
-                    ]
-                counter = 0
-                for p in positions:
-                    if p in stack:
-                        i = stack.index(p)
-                        p2 = stack.pop(i)
-                        contour.insert(0,p2)
-                        p1 = p2
-                    else:
-                        counter = counter+1
-                if counter == 8:
-                    break
-            
-        print contour
-        return contour
-            
-    
-    def findCorner(self,contour,size):
-        if len(contour)>size:
-            points = []
-            
-            
-            return points
-        else:
-            return []
-        
     
     def findCornersOnContour(self,contour,size):
         '''
@@ -242,255 +136,96 @@ class QubicEdgesTest(unittest.TestCase):
         else:
             return []
     
-    
-    def colorLabels(self,image,res,background_label = -1):
-        #kolorowanie etykiet
-        uni =  np.unique(res)
-        colors = getColors(len(uni))
-        for k,j in enumerate(uni):
-            if j == background_label:
-                continue
-            color = np.asarray(colors[k])
-            image[res == j] = color
-        
-        return image
-    
-    def fragmentation(self,skeleton):
-        fragments = []
-        points = np.nonzero(skeleton)
-        points = np.transpose(points)
-        nodes = []
-        for p in points:
-            y = p[0]
-            x = p[1]
-            mask = skeleton[y-1:y+2,x-1:x+2]
-            ones = np.nonzero(mask)
-            neibours = ones[0].size
-            if neibours>3:
-                nodes.append((y,x))
-            pass
-        skeleton2 = skeleton.copy()
-        for node in nodes:
-            skeleton2[node] = 0
-        
-        resT = measure.label(skeleton2,neighbors=8,background=0)
-        resT = np.asarray(resT)
-        resT.reshape(resT.shape[0],resT.shape[1],1)
-        
-        uni =  np.unique(resT)
-        print 'unique l',uni
-        lf = LabelFactory([])
-        resT,labelsIT,maxIT = lf.getBackgroundLabel(resT,11,False)
-        
-        uni =  np.unique(resT)
-        print 'unique l',uni
-        
-        for node in nodes:
-            skeleton2[node] = 1
-        
-        return skeleton2, resT ,labelsIT,nodes
-    
-    def getWallContour(self,area_dists,labelsT,resT,img,Bmap):
-        contours = {}
-        #szukanie konturow nalezacych do scian
-        for wall_label,dist_map in area_dists.iteritems():
-            edgesMap2 = Bmap.copy()
-            edgesMap2[:] = 0
-            areaIMG = np.where(dist_map<1,1,0)
-            
-            image6 = img.copy()
-            #caly bialy
-            image6[areaIMG > -1] = (0,0,0)
-#             image6[areaIMG == 1] = (0,255,255)
-            
-            contours[wall_label] = []
-            for edge_label in labelsT:
-                
-                indexes = np.where(resT == edge_label)
-                values = dist_map[indexes]
-                
-                max_value = np.max(values)
-                min_value = np.max(values)
-                if max_value < 20 and min_value>1:
-                    
-                    contour = np.transpose(indexes)
-                    
-                    contour = self.getContour(contour)
-                    contours[wall_label].append(contour)
-                    
-                    image6[indexes] = (255,255,0)
-                    
-                    edgesMap2[indexes] = 1
-                    
-        return image6,edgesMap2,contours
-    
-    
-    def proceed(self,img,mask,folder, i, letter):
+       
+    def proceed(self,zone,mask,folder, i, letter):
         pic = i
-        image = img.copy()
+        
+        qubic = QubicObject(zone)
+        
         #caly bialy
-        image[mask > -1] = (0,0,0)
+        image = qubic.emptyImage.copy()
         image2 = image.copy()
         image3 = image.copy()
         
-        CNTmask = mask.copy()
+#         CNTmask = mask.copy()
         
-        
-        image[mask == 1] = (255,255,255)
-        
-        ei = image2.copy()
-        ei[mask == 1] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_sobel_1.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
-                
-        res = measure.label(mask,neighbors=8,background=1)
-        res = np.asarray(res)
-        res.reshape(res.shape[0],res.shape[1],1)
-        
-        lf = LabelFactory([])
-        res,labelsI,maxI = lf.getBackgroundLabel(res)
-        
-        ei = image2.copy()
-        ei[res == maxI] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_background_1.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
-        label = maxI
-        res = self.openOperation(res, label, kernelSize=5)
-        
-        ei = image2.copy()
-        ei[res == maxI] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_open_b_1.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
-        print 'unique', np.unique(res)
-        
-        # nie wiadomo czy to potrzebne, bo w sumie szeciany maja w miare jednolite pola
-        defs = []
-        cnts = []
-        hulls = []
-        area_dists = {}
-        for label in labelsI:
-            if label == maxI:
-                continue
-            res = self.openOperation(res, label, kernelSize=9)
-            
-#             areaIMG = image.copy()
-#             areaIMG[:] = (0,0,0)
-            area = np.where(res == label ,1,0).astype('uint8')
-            
-            area2 = np.where(res == label ,0,1).astype('uint8')
-            area_dists[label] = cv2.distanceTransform(area2,cv2.cv.CV_DIST_L1,3)
-            
-            contours = cv2.findContours(area,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
-            cnt = contours[0][0]
-            
-            hull = cv2.convexHull(cnt,returnPoints = False)
-            hulls.append(hull)
-            defects = cv2.convexityDefects(cnt,hull)
-            defs.append(defects)
-            cnts.append(cnt)
-            
-            
-#             pass
-        
-#             f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s_areaIMG.jpg' % (folder, i,letter)
-#             print 'savaing to ' + f
-#             cv2.imwrite(f, areaIMG)
-        
-        # szkieletyzacja
-        mask[res == maxI] = 0
-        edgesMap = np.where(res == -1,1,0).astype('uint8') 
-        
-        ei = image2.copy()
-        ei[edgesMap > 0] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_to_skeleton_1.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
+        # szkieletyzacja kontorow
 #         edgesMap = mask.copy()
-        mask2 = morphology.skeletonize(edgesMap > 0)
-        mask2 = mask2.astype('uint8') 
+#         mask2 = morphology.skeletonize(qubic.edgeMask > 0)
+#         mask2 = mask2.astype('uint8') 
         
-        ei = image2.copy()
-        ei[mask2 == 1] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton1.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
+#         np.where(mask2 == 1,255,0)
         
-        mask2,resT,labelsT,nodes = self.fragmentation(mask2)
         
+#         mask2,resT,labelsT,nodes = self.fragmentation(mask2)
         
         
                     
-        for wall_label,dist_map in area_dists.iteritems():
-            image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
-                    
-#                     cv2.circle(image6,(contour[0][1],contour[0][0]),2,(100,15,255),-1)
-#                     cv2.circle(image6,(contour[-1][1],contour[-1][0]),2,(100,15,255),-1)
-                    
-#                     points = self.findCornersOnContour(contour, 100)
-#                     for p in points:
-#                         pass
-#                         cv2.circle(image6,(contour[p][1],contour[p][0]),5,(255,0,255),2)
-            
-                    
-                    
-            for node in nodes:
-                value = dist_map[node]
-                if value < 20:
-                    #node belong to the wall
-                    pass
+#         for wall_label,dist_map in area_dists.iteritems():
+#             image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
+#                     
+# #                     cv2.circle(image6,(contour[0][1],contour[0][0]),2,(100,15,255),-1)
+# #                     cv2.circle(image6,(contour[-1][1],contour[-1][0]),2,(100,15,255),-1)
+#                     
+# #                     points = self.findCornersOnContour(contour, 100)
+# #                     for p in points:
+# #                         pass
+# #                         cv2.circle(image6,(contour[p][1],contour[p][0]),5,(255,0,255),2)
+#             
+#                     
+#                     
+#             for node in nodes:
+#                 value = dist_map[node]
+#                 if value < 20:
+#                     #node belong to the wall
+#                     pass
 #                     image6[node] = (255,255,0)
             #znaldz linie hougha
-            rho = 2
-            theta = np.pi/90
-            threshold = 20
-                    
-            lines = cv2.HoughLines(edgesMap2,rho,theta,threshold)
-#             if lines is not None:
-#                 for line in lines:
-#                     line = line[0]
-#                     cv2.line(image6, (line[0],line[1]), (line[2],line[3]), (128,0,128), 1)
-            
-            if lines is not None and len(lines[0])>0:
-                mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
-                pass
+#             rho = 2
+#             theta = np.pi/90
+#             threshold = 20
+#                     
+#             lines = cv2.HoughLines(edgesMap2,rho,theta,threshold)
+# #             if lines is not None:
+# #                 for line in lines:
+# #                     line = line[0]
+# #                     cv2.line(image6, (line[0],line[1]), (line[2],line[3]), (128,0,128), 1)
+#             
+#             if lines is not None and len(lines[0])>0:
+#                 mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
+#                 pass
             
 #             image6 = self.interpolate(image6, contours[wall_label])
             
-            edgesMap3 = CNTmask.copy()
-            edgesMap3[:] = 0
-#             edgesMap3[image6 == (255,255,0)] = 1
-            
-            
-            f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_%s_areaIMG.jpg' % (folder, i,letter,wall_label)
-            print 'savaing to ' + f
-            cv2.imwrite(f, image6)
-            pass
+#             edgesMap3 = CNTmask.copy()
+#             edgesMap3[:] = 0
+# #             edgesMap3[image6 == (255,255,0)] = 1
+#             
+#             
+#             f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_%s_areaIMG.jpg' % (folder, i,letter,wall_label)
+#             print 'savaing to ' + f
+#             cv2.imwrite(f, image6)
+#             pass
         
-        skeleton = mask2.copy()
         
         image5 = image2.copy()
-        image5 = self.colorLabels(image5, resT, -1)
+        lf = LabelFactory()
+        image5 = lf.colorLabels(image5, qubic.edgeLabelsMap, -1)
         
-        f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_skeleton.jpg' % (folder, pic,letter)
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s_skeleton.jpg' % (folder, pic,letter)
         print 'savaing to ' + f
-        image2[skeleton == 1] = (255,255,255)
-        cv2.imwrite(f, image2)
+        cv2.imwrite(f, image5)
         
-        image2[skeleton == 1] = (255,255,255)
+        image1 = image2.copy()
+        image1[qubic.edgeMask == 1] = (255,255,255)
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s_sobel.jpg' % (folder, pic,letter)
+        print 'savaing to ' + f
+        cv2.imwrite(f, image1)
+        
+        image2[qubic.skeleton2 == 1] = (255,255,255)
 
-        cnt,hi = cv2.findContours(mask2,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
         
         #znalezienie lini na szkielecie
-        
-        image3[skeleton == 1] = (255,255,255)
-                
         rho = 0.5
         theta = np.pi/45
         part = 25
@@ -499,61 +234,14 @@ class QubicEdgesTest(unittest.TestCase):
         theta = np.pi/45
         part = 10
         
-        threshold=int(skeleton.shape[1]/part)
-#         threshold = 10
-        
-        #znaldz linie hougha
-        lines = cv2.HoughLines(skeleton,rho,theta,threshold)
-        if len(lines[0])>0:
-            mark.drawHoughLines(lines[0], img, (128,0,128), 1)
             
-            img[skeleton == 1] = (255,0,0)
-        
-#         image3[maps == 1] = (255,0,255)
-        
-        f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_linie.jpg' % (folder, pic,letter)
-        print 'savaing to ' + f
-        cv2.imwrite(f, img)
-        
-#         print 'contours', cont
-#         print 'hierarhy', hi
-
-        cont = {}
-        print len(cnt)
-        for k in range(len(cnt)):
-            cont[k] = [map(tuple,j)[0] for j in cnt[k]]
+        image2 = lf.colorLabels(image2,qubic.labelsMap)
             
         
-            
-        image2 = self.colorLabels(image2,res)
-            
-        
-        
-        kk = 0    
-        for kk, defects in enumerate(defs): 
-            image3 = image2.copy()
-            cnt = cnts[kk]
-            for jj in range(defects.shape[0]):
-                s,e,f,d = defects[jj,0]
-                start = tuple(cnt[s][0])
-                end = tuple(cnt[e][0])
-                far = tuple(cnt[f][0])
-                line = an.getLine(start, end,0)
-                distance = an.calcDistFromLine(far, line)
-                
-                cv2.line(image3,start,end,[255,255,255],2)
-                if distance > 20:
-                    print 'wielobok wypukly'
-                    cv2.circle(image3,far,5,[0,0,255],-1)
-            
-            f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s_skeleton_%d.jpg' % (folder, pic,letter,kk)
-            print 'savaing to ' + f
-            cv2.imwrite(f, image3)
-            
-        for kk,c in enumerate(cnts):
+        for kk,wall in qubic.walls.iteritems():
             image4 = image2.copy()
             points = []
-            for x in c:
+            for x in wall.cnt:
                 point = tuple(x[0])
                 points.append(point)
             indexes = self.findCornersOnContour(points, 50)
@@ -564,7 +252,7 @@ class QubicEdgesTest(unittest.TestCase):
                 
                 cv2.circle(image4,p,10,(255,255,0),3)
             
-            f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s_hull_%d.jpg' % (folder, pic,letter,kk)
+            f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s_hull_%d.jpg' % (folder, pic,letter,kk)
             print 'savaing to ' + f
             cv2.imwrite(f, image4)
             
@@ -661,19 +349,19 @@ class QubicEdgesTest(unittest.TestCase):
         
         ed = edgeDetector.edgeDetector(zoneA.view)
         mask = ed.getSobel()
-        imgA,maskA = self.proceed(zoneA.view,mask,folder, i,'A')
+        imgA,maskA = self.proceed(zoneA,mask,folder, i,'A')
         
         ed = edgeDetector.edgeDetector(zoneB.view)
         mask = ed.getSobel()
-        imgB,maskB = self.proceed(zoneB.view,mask,folder, i,'B')
+        imgB,maskB = self.proceed(zoneB,mask,folder, i,'B')
         
         ed = edgeDetector.edgeDetector(zoneC.view)
         mask = ed.getSobel()
-        imgC,maskC = self.proceed(zoneC.view,mask,folder, i,'C')
+        imgC,maskC = self.proceed(zoneC,mask,folder, i,'C')
         
         ed = edgeDetector.edgeDetector(zoneD.view)
         mask = ed.getSobel()
-        imgD,maskD = self.proceed(zoneD.view,mask,folder, i,'D')
+        imgD,maskD = self.proceed(zoneD,mask,folder, i,'D')
         
         
         mask = maskA
@@ -694,19 +382,19 @@ class QubicEdgesTest(unittest.TestCase):
 #             self.scene.view[mask == 1] = (255,0,0)
         
         
-        f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s.jpg' % (folder, i,'A')
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s.jpg' % (folder, i,'A')
         print 'savaing to ' + f
         cv2.imwrite(f, imgA)
         
-        f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s.jpg' % (folder, i,'B')
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s.jpg' % (folder, i,'B')
         print 'savaing to ' + f
         cv2.imwrite(f, imgB)
         
-        f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s.jpg' % (folder, i,'C')
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s.jpg' % (folder, i,'C')
         print 'savaing to ' + f
         cv2.imwrite(f, imgC)
         
-        f = '../img/results/automated/%d/objects2/processed/%d_objects_on_mirror_%s.jpg' % (folder, i,'D')
+        f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s.jpg' % (folder, i,'D')
         print 'savaing to ' + f
         cv2.imwrite(f, imgD)
         
