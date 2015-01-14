@@ -49,7 +49,7 @@ class Wall(object):
         for kk, defects in enumerate(defs): 
                 cnt = self.cnt
                 for jj in range(defects.shape[0]):
-                    s,e,f,d = defects[jj,0]
+                    s,e,f,d = defects[jj]
                     
                     #line endings
                     start = tuple(cnt[s][0])
@@ -64,7 +64,7 @@ class Wall(object):
                     if distance > 20:
                         print 'wielobok wypukly. Punkt:',far
                         fars.append(far)
-        if len(fars>0):
+        if len(fars)>0:
             self.convex = (True,fars)
         else:
             self.convex = (False,fars)

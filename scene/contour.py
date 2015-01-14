@@ -5,6 +5,7 @@ Created on Jan 8, 2015
 '''
 import cv2
 import numpy as np
+import func.analise as an
 
 class Contour(object):
     '''
@@ -26,6 +27,7 @@ class Contour(object):
         self.points = orderedPoints
         self.begining = orderedPoints[0]
         self.end = orderedPoints[-1]
+        
         
         self.lines = None
         
@@ -85,7 +87,6 @@ class Contour(object):
                 break
             
         if begining[1] is not None:
-            print 'not none'
             p1 = begining[1]
             while len(stack)>0:
                 y,x = p1
@@ -128,3 +129,22 @@ class Contour(object):
 #             mark.drawHoughLines(lines[0][:3], image6, (128,0,128), 1)
         else:
             self.linse = None
+
+    def findCornersOnContour(self,size):
+        '''
+            size - dlugosc probierza, offset pomiedzy elementami konturu dla ktorych zrobiony jest odcinek
+        '''
+    
+        contour = self.contour
+        if len(contour)>size:
+            indexes = []
+            dist = an.calcDistances(contour,size,int(size*0.1))
+    
+            for d in dist.iterkeys():
+                segment1 = dist[d]
+                MaxValue = max(np.asarray(segment1)[:,1])
+                index = np.where(segment1 == MaxValue)[0]
+                indexes.append(segment1[index[0]][0])
+            return indexes
+        else:
+            return []

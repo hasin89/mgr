@@ -43,7 +43,7 @@ class QubicObject(object):
         self.edgeLabels = edgeLabels
         self.nodes = nodes
         
-        self.getWallContour(walls,edgeLabels,edgeLabelsMap,nodes)
+        self.getWallsProperties(walls,edgeLabels,edgeLabelsMap,nodes)
         
         
     
@@ -58,11 +58,7 @@ class QubicObject(object):
         
         ei = self.emptyImage.copy()
         ei[:] = (0,0,0)
-        ei[edgeMask > 0] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_sobel_2.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
+        ei[edgeMask > 0] = (255,255,255)        
         return edgeMask
     
     def openOperation(self,res,label,kernelSize = 3):
@@ -89,19 +85,13 @@ class QubicObject(object):
         
         ei = self.emptyImage.copy()
         ei[labelsMap == backgroundLabel] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_background_2.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
         
         #operacja otwarcia na tle - eliminacja dorbnych zaklucen
         labelsMap = self.openOperation(labelsMap, backgroundLabel, kernelSize=5)
         
         ei = self.emptyImage.copy()
         ei[labelsMap == backgroundLabel] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_open_b_2.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
-        
+
         walls = {}
         
         #dla kazdej etykiety poza etykieta tla czyli dla kazdej sciany
@@ -126,19 +116,15 @@ class QubicObject(object):
         ei = self.emptyImage.copy()
         ei[:] = (0,0,0)
         ei[self.edgeMask > 0] = (255,255,255)
-        f = '../img/results/automated/9/objects2/debug/skeleton_to_skeleton_2.jpg' 
-        print 'savaing to ' + f
-        cv2.imwrite(f, ei)
+
         edges = ContourDectecting.transfromEdgeMaskIntoEdges(self.edgeMask,self.emptyImage)
-        
-        
         
         ocd = ContourDectecting.ObjectContourDetector(edges)
         skeleton2, edgeLabelsMap, edgeLabels, nodes = ocd.fragmentation(ocd.skeleton) 
         self.skeleton2 = skeleton2
         return skeleton2, edgeLabelsMap, edgeLabels, nodes
     
-    def getWallsContourAndNodes(self,walls,edgeLabels,edgeLabelsMap,nodes):
+    def getWallsProperties(self,walls,edgeLabels,edgeLabelsMap,nodes):
         '''
         area_dist - mapa dystansu od sciany
         labelsT - etykiety krawedzi
@@ -147,7 +133,7 @@ class QubicObject(object):
         Bmap - empty map
         '''
         #szukanie konturow nalezacych do scian
-        for wall in walls.iteritems():
+        for kk,wall in walls.iteritems():
             
             for edge_label in edgeLabels:
                 

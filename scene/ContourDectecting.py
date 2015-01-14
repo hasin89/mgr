@@ -495,11 +495,7 @@ def transfromEdgeMaskIntoEdges(edgeMask,emptyImage):
     
     ei = emptyImage.copy()
     ei[:] = (0,0,0)
-    ei[edges2 == 1] = (255,255,255)
-    f = '../img/results/automated/9/objects2/debug/skeleton2.jpg' 
-    print 'savaing to ' + f
-    cv2.imwrite(f, ei)
-        
+    ei[edges2 == 1] = (255,255,255)        
         
     return edges2
      
