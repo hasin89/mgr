@@ -42,7 +42,10 @@ class Wall(object):
         self.wallDistance = cv2.distanceTransform(wallInverted,cv2.cv.CV_DIST_L1,3)
         
         self.contours = []
+        self.contoursDict = {}
         self.nodes = []
+        
+        self.vertexes = []
         
     def analyzeDefects(self,defs):
         fars = []
@@ -69,3 +72,34 @@ class Wall(object):
         else:
             self.convex = (False,fars)
     
+    
+    def findPotentialCorners(self):
+        points = []
+        corners = []
+        for x in self.cnt:
+            point = tuple(x[0])
+            points.append(point)
+        indexes = self.__findCornersOnContour(points, 50)
+        for ii in indexes:
+            corners.append(points[ii])
+            
+        return corners
+
+    
+    def __findCornersOnContour(self,contour,size):
+        '''
+            size - dlugosc probierza, offset pomiedzy elementami konturu dla ktorych zrobiony jest odcinek
+        '''
+    
+        if len(contour)>size:
+            indexes = []
+            dist = an.calcDistances(contour,size,int(size*0.1))
+    
+            for d in dist.iterkeys():
+                segment1 = dist[d]
+                MaxValue = max(np.asarray(segment1)[:,1])
+                index = np.where(segment1 == MaxValue)[0]
+                indexes.append(segment1[index[0]][0])
+            return indexes
+        else:
+            return []

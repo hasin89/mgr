@@ -537,3 +537,4 @@ class ObjectContourDetector():
         edgeLabelsMap,edgeLabels,maxIT = lf.getBackgroundLabel(edgeLabelsMap,11,False)
         
         return skeleton2, edgeLabelsMap, edgeLabels, nodes
+        

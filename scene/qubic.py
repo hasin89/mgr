@@ -37,10 +37,13 @@ class QubicObject(object):
         self.backgroundLabel = backgroundLabel
         self.walls = walls
          
-        skeleton, edgeLabelsMap, edgeLabels, nodes  = self.findContours()
+        skeleton, edgeLabelsMap, edgeLabels, nodesPoints  = self.findContours()
+        
         self.skeleton = skeleton
         self.edgeLabelsMap = edgeLabelsMap
         self.edgeLabels = edgeLabels
+        
+        nodes = self.getNodes(nodesPoints,skeleton)
         self.nodes = nodes
         
         self.getWallsProperties(walls,edgeLabels,edgeLabelsMap,nodes)
@@ -70,6 +73,39 @@ class QubicObject(object):
     
         return res
     
+    def getNodes(self,points,binaryMap):
+        nodes = {}
+        
+        lf = LabelFactory([])
+        nodeMap = np.zeros_like(binaryMap)
+        ll = map(np.array,np.transpose(np.array(points)))
+        nodeMap[ll] = 1
+        
+        nodeLabelsMap = lf.getLabelsExternal(nodeMap, neighbors=8, background=0)
+        nodeLabels =  np.unique(nodeLabelsMap)
+        
+        for nodeLabel in nodeLabels:
+            if nodeLabel == -1:
+                continue
+            indexes = np.where(nodeLabelsMap == nodeLabel)
+#             nodes[nodeLabel] = indexes 
+            
+            nmax = 0
+            for p in np.transpose(indexes):
+                y = p[0]
+                x = p[1]
+                submask = nodeMap[y-1:y+2,x-1:x+2]
+                ones = np.nonzero(submask)
+                neibours = ones[0].size
+                if neibours>1:
+                    if nmax<neibours:
+                        nmax = neibours
+                        N = (y,x)
+            if nmax>0:
+                nodes[nodeLabel] = N                
+            
+        return nodes
+        
     def findWalls(self,edgeMask):
         '''
             znajduje sciany i tlo
@@ -120,9 +156,12 @@ class QubicObject(object):
         edges = ContourDectecting.transfromEdgeMaskIntoEdges(self.edgeMask,self.emptyImage)
         
         ocd = ContourDectecting.ObjectContourDetector(edges)
-        skeleton2, edgeLabelsMap, edgeLabels, nodes = ocd.fragmentation(ocd.skeleton) 
+        skeleton2, edgeLabelsMap, edgeLabels, nodesPoints = ocd.fragmentation(ocd.skeleton) 
+        
+        
+        
         self.skeleton2 = skeleton2
-        return skeleton2, edgeLabelsMap, edgeLabels, nodes
+        return skeleton2, edgeLabelsMap, edgeLabels, nodesPoints
     
     def getWallsProperties(self,walls,edgeLabels,edgeLabelsMap,nodes):
         '''
@@ -143,14 +182,17 @@ class QubicObject(object):
                 max_value = np.max(values)
                 min_value = np.max(values)
                 if max_value < 20 and min_value>1:
-                    
-                    c = Contour(edge_label,np.where(edgeLabelsMap == edge_label,1,0))
+                    mmap = np.where(edgeLabelsMap == edge_label,1,0).astype('uint8')
+                    c = Contour(edge_label,mmap)
                     
                     wall.contours.append(c)
+                    wall.contoursDict[edge_label] = c
                     
-            for node in nodes:
-                value = wall.wallDistance[node]
-                if value < 20:
+            for kk,node in nodes.iteritems():
+                values = wall.wallDistance[node]
+                max_value = np.max(values)
+                min_value = np.max(values)
+                if max_value < 20 and min_value>1:
                     #node belong to the wall
                     wall.nodes.append(node)
                     

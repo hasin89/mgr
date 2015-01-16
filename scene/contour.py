@@ -28,6 +28,9 @@ class Contour(object):
         self.begining = orderedPoints[0]
         self.end = orderedPoints[-1]
         
+        self.wayPoint = None
+        self.polygon = self.aproximate() 
+        
         
         self.lines = None
         
@@ -116,20 +119,58 @@ class Contour(object):
        
     def getLines(self):
         #znaldz linie hougha
-        rho = 2
-        theta = np.pi/90
+        rho = 1
+        theta = np.pi/180
         threshold = 20
+        
+        if (self.wayPoint is not None):
+            points = self.points
+            linesResult = np.array([])
+            counter = 0
+            for i in range(len(self.wayPoint)):
+                far = (self.wayPoint[i][0][0],self.wayPoint[i][0][1])
+                print far
+                mapI = np.zeros_like(self.map)
                 
-        lines = cv2.HoughLines(self.map,rho,theta,threshold)
-        
-        self.lines = lines
-        
-        if lines is not None and len(lines[0])>0:
-            self.lines = lines[0]
-#             mark.drawHoughLines(lines[0][:3], image6, (128,0,128), 1)
+                idx = points.index(far)
+                if idx == 0 :
+                    continue
+                print 'index',idx
+                
+                indexes = map(np.array,np.transpose(np.array(points[:idx])))
+                points = points[idx:]
+                mapI[indexes] = 1
+                
+                linesI = cv2.HoughLines(mapI,rho,theta,threshold)
+                
+                if linesI is not None and len(linesI[0])>0:
+                    print 'lines size',len(linesI[0])
+                    counter += 1
+                    linesResult = np.append(linesResult, linesI[0][0])
+            print 'size',len(self.wayPoint)
+            linesR = np.reshape(linesResult,(counter,2))
+            print linesR
+            self.lines = linesR
+            
         else:
-            self.linse = None
+                    
+            lines = cv2.HoughLines(self.map,rho,theta,threshold)
+            self.lines = lines
+            
+            if lines is not None and len(lines[0])>0:
+                self.lines = lines[0]
+    #             mark.drawHoughLines(lines[0][:3], image6, (128,0,128), 1)
+            else:
+                self.lines = None
 
+    def aproximate(self):
+        start = self.begining
+        tresh = 30
+        polygon = cv2.approxPolyDP(np.asarray(self.points),tresh, False)
+        if max > 30:
+            self.wayPoint = polygon
+        return polygon
+    
     def findCornersOnContour(self,size):
         '''
             size - dlugosc probierza, offset pomiedzy elementami konturu dla ktorych zrobiony jest odcinek

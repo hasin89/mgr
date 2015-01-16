@@ -116,25 +116,6 @@ class QubicEdgesTest(unittest.TestCase):
             
         
         return zone
-            
-    
-    def findCornersOnContour(self,contour,size):
-        '''
-            size - dlugosc probierza, offset pomiedzy elementami konturu dla ktorych zrobiony jest odcinek
-        '''
-    
-        if len(contour)>size:
-            indexes = []
-            dist = an.calcDistances(contour,size,int(size*0.1))
-    
-            for d in dist.iterkeys():
-                segment1 = dist[d]
-                MaxValue = max(np.asarray(segment1)[:,1])
-                index = np.where(segment1 == MaxValue)[0]
-                indexes.append(segment1[index[0]][0])
-            return indexes
-        else:
-            return []
     
        
     def proceed(self,zone,mask,folder, i, letter):
@@ -145,67 +126,9 @@ class QubicEdgesTest(unittest.TestCase):
         #caly bialy
         image = qubic.emptyImage.copy()
         image2 = image.copy()
+        
         image3 = image.copy()
         
-#         CNTmask = mask.copy()
-        
-        # szkieletyzacja kontorow
-#         edgesMap = mask.copy()
-#         mask2 = morphology.skeletonize(qubic.edgeMask > 0)
-#         mask2 = mask2.astype('uint8') 
-        
-#         np.where(mask2 == 1,255,0)
-        
-        
-#         mask2,resT,labelsT,nodes = self.fragmentation(mask2)
-        
-        
-                    
-#         for wall_label,dist_map in area_dists.iteritems():
-#             image6,edgesMap2,contours = self.getWallContour(area_dists, labelsT, resT, img, CNTmask)
-#                     
-# #                     cv2.circle(image6,(contour[0][1],contour[0][0]),2,(100,15,255),-1)
-# #                     cv2.circle(image6,(contour[-1][1],contour[-1][0]),2,(100,15,255),-1)
-#                     
-# #                     points = self.findCornersOnContour(contour, 100)
-# #                     for p in points:
-# #                         pass
-# #                         cv2.circle(image6,(contour[p][1],contour[p][0]),5,(255,0,255),2)
-#             
-#                     
-#                     
-#             for node in nodes:
-#                 value = dist_map[node]
-#                 if value < 20:
-#                     #node belong to the wall
-#                     pass
-#                     image6[node] = (255,255,0)
-            #znaldz linie hougha
-#             rho = 2
-#             theta = np.pi/90
-#             threshold = 20
-#                     
-#             lines = cv2.HoughLines(edgesMap2,rho,theta,threshold)
-# #             if lines is not None:
-# #                 for line in lines:
-# #                     line = line[0]
-# #                     cv2.line(image6, (line[0],line[1]), (line[2],line[3]), (128,0,128), 1)
-#             
-#             if lines is not None and len(lines[0])>0:
-#                 mark.drawHoughLines(lines[0][:8], image6, (128,0,128), 1)
-#                 pass
-            
-#             image6 = self.interpolate(image6, contours[wall_label])
-            
-#             edgesMap3 = CNTmask.copy()
-#             edgesMap3[:] = 0
-# #             edgesMap3[image6 == (255,255,0)] = 1
-#             
-#             
-#             f = '../img/results/automated/%d/objects2/linie/%d_objects_on_mirror_%s_%s_areaIMG.jpg' % (folder, i,letter,wall_label)
-#             print 'savaing to ' + f
-#             cv2.imwrite(f, image6)
-#             pass
         
         
         image5 = image2.copy()
@@ -240,21 +163,46 @@ class QubicEdgesTest(unittest.TestCase):
         
         for kk,wall in qubic.walls.iteritems():
             image4 = image2.copy()
-            points = []
-            for x in wall.cnt:
-                point = tuple(x[0])
-                points.append(point)
-            indexes = self.findCornersOnContour(points, 50)
-            print 'indexes', indexes
-            for ii in indexes:
-                cv2.circle(image4,points[ii],5,(255,0,255),2)
-            for p in self.POINTS:
+            corners = wall.findPotentialCorners()
+            for p in corners:
+                cv2.circle(image4,p,5,(255,0,255),2)
                 
+            for p in self.POINTS:
                 cv2.circle(image4,p,10,(255,255,0),3)
             
             f = '../img/results/automated/%d/obj3/%d_objects_on_mirror_%s_hull_%d.jpg' % (folder, pic,letter,kk)
             print 'savaing to ' + f
             cv2.imwrite(f, image4)
+            
+            image3 = image.copy()
+            for c in wall.contours:
+                
+                polygon  = c.polygon
+                if len(polygon)>1:
+                    for i in range(len(polygon)-1):
+                        cv2.line(image3, (polygon[i][0][1],polygon[i][0][0]), (polygon[i+1][0][1],polygon[i+1][0][0]),(255,255,255),1)
+                
+                ll = map(np.array,np.transpose(np.array(c.points)))
+                image3[ll] = (0,255,255)
+                c.getLines()
+                lines = c.lines
+                if lines is not None:
+#                     print lines
+                    if c.wayPoint is not None:
+                        mark.drawHoughLines(lines, image3, (128,0,128), 1)
+                    elif len(polygon)>2:
+                        mark.drawHoughLines(lines[:len(polygon)-1], image3, (128,0,128), 1)
+                    else:
+                        mark.drawHoughLines(lines[:1], image3, (128,0,128), 1)
+            for node in wall.nodes:
+#                 ll = map(np.array,np.transpose(np.array(c.points)))
+                cv2.circle(image3,(node[1],node[0]),2,(255,255,0),-1)
+                
+            
+            
+            f = '../img/results/automated/%d/obj3/%d_common_edge_%s_%d.jpg' % (folder, pic,letter,kk)
+            print 'savaing to ' + f
+            cv2.imwrite(f, image3)
             
         return image,mask
     
@@ -413,11 +361,11 @@ class QubicEdgesTest(unittest.TestCase):
 #          
 #     def test_9_7(self):
 #         self.execute(9, 7)
-#          
-#          
+# #          
+# #          
 #     def test_9_10(self):
 #         self.execute(9, 10)
-#      
+#       
 #     def test_9_11(self):
 #         self.execute(9, 11)           
 

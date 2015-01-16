@@ -32,11 +32,8 @@ class edgeDetectionTest(unittest.TestCase):
         filenames = {}
         
         for idx in range(numBoards):
-            if idx<10:
-                nr = "0"+str(idx)
-            else:
-                nr = str(idx)
-            filenames[idx] =  basePath + "frame0" + nr + ".png"
+            nr = idx + 1
+            filenames[idx] =  basePath + str(nr) + ".jpg"
         
         return filenames
     
@@ -49,6 +46,15 @@ class edgeDetectionTest(unittest.TestCase):
             points3D.append([i/board_w,i%board_w,0])
         return points3D
     
+    def getMirror3Dpoints(self,board_w,board_n,board_h):
+        '''
+        initialize real 3d points of the chessboard
+        '''
+        points3D = []
+        for i in range(board_n):
+            points3D.append([board_h - 1 - i/board_w, i%board_w , 0])
+        return points3D
+    
     def findCorners(self,filename,board_size):
         '''
             find corners of each calibration image
@@ -58,7 +64,8 @@ class edgeDetectionTest(unittest.TestCase):
         found,corners = cv2.findChessboardCorners(gray,board_size,flags=cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_FILTER_QUADS)
     
         if found:
-            search_size = (11,11)
+            search_size = (21,21)
+#             search_size = (11,11)
             zero_zone = (-1,-1)
             cv2.cornerSubPix(gray,corners,search_size,zero_zone,(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1))
             
@@ -66,7 +73,8 @@ class edgeDetectionTest(unittest.TestCase):
             print 'not found', filename
             
         cv2.drawChessboardCorners(gray, board_size, corners, True);
-        cv2.imshow("corners", gray);
+        cv2.imwrite('calibration/5/5/corners_'+filename[0:-3]+'.jpg',gray)
+#         cv2.imshow("corners", gray);
 #         cv2.waitKey(0);
         return corners
     
@@ -95,8 +103,9 @@ class edgeDetectionTest(unittest.TestCase):
             for i in range(board_n): 
                 cv2.circle(img,(imagePoints2[idx][i][0][0],imagePoints2[idx][i][0][1]),5,(0,255,0),-1)
                 cv2.circle(img,(imagePointsR[idx][i][0][0],imagePoints2[idx][i][0][1]),6,(0,0,255),2)
-            cv2.imshow("repr",img)
-            cv2.waitKey(0)
+#             cv2.imshow("repr",img)
+            cv2.imwrite('calibration/5/5/difference'+str(idx)+'.jpg',img)
+#             cv2.waitKey(0)
             
     def showDistortion(self,filenames,numBoards,mtx,dist):
         for idx in range(numBoards):
@@ -106,8 +115,10 @@ class edgeDetectionTest(unittest.TestCase):
             img2 = cv2.undistort(gray,mtx,dist)
             
             diff = cv2.absdiff(gray,img2)
-            cv2.imshow('n',diff)
-            cv2.waitKey(0)
+            
+            cv2.imwrite('calibration/5/5/distortion'+str(idx)+'.jpg',diff)
+#             cv2.imshow('n',diff)
+#             cv2.waitKey(0)
         
     def testCalibration(self):
         numBoards = 14
@@ -126,9 +137,11 @@ class edgeDetectionTest(unittest.TestCase):
         corners = []
         
         # list of images
-        basePath = 'calibration/'
+        basePath = 'calibration/5/'
         filenames = self.getFilenames(numBoards, basePath)
         points3D = self.get3Dpoints(board_w, board_n)
+        
+        pointsMirror3D = self.getMirror3Dpoints(board_w, board_n,board_h)
         
         success = 0
         for idx in range(numBoards):
@@ -136,8 +149,13 @@ class edgeDetectionTest(unittest.TestCase):
 #             corners = corners[:,:,0]
 #             print 'corners',corners
             imagePoints.append(corners)
-            objectPoints.append(points3D)
+                    
+            if idx % 2 == 1:
+                objectPoints.append(points3D)
+            else:
+                objectPoints.append(pointsMirror3D)
             success = success +1
+            print 'success:', success
                   
         print 'corners success:', success, 'out of',numBoards 
         
@@ -157,17 +175,17 @@ class edgeDetectionTest(unittest.TestCase):
             print 'camera', idx
             print 'R vector', rvecs[idx]
             print 'T vector', tvecs[idx]
-        print 'p'
         
         imagePointsR = {}
         jakobian = {}
         
         for idx in range(numBoards):
+#             dist = np.array([[]])
             imagePointsR[idx],jakobian[idx] = cv2.projectPoints(objectPoints2[idx],rvecs[idx],tvecs[idx],mtx,dist)
             
             
             
-#         self.showDifference(filenames,imagePoints2,imagePointsR)
+        self.showDifference(filenames,imagePoints2,imagePointsR)
 #         self.showDistortion(filenames, numBoards, mtx, dist)
             
         error = self.calcError(imagePoints, imagePointsR)
@@ -175,8 +193,8 @@ class edgeDetectionTest(unittest.TestCase):
         origin = np.array([[0],[0],[0]])
         
         scale = 5
-        transl = 150
-        dispImg = np.zeros((300,300,3),dtype=np.uint8)
+        transl = 600
+        dispImg = np.zeros((1200,1200,3),dtype=np.uint8)
         
         p1 = origin
         p1 *= scale
@@ -191,7 +209,7 @@ class edgeDetectionTest(unittest.TestCase):
             
             Rotn,jakobian = cv2.Rodrigues(rvecs[idx])
             
-            pt2 = np.array([[320],[240-1000],[1]])
+            pt2 = np.array([[2304],[1536-4000],[1]])
             
             
             m1 = np.dot(invertedCameraMatrix,pt2)
@@ -199,7 +217,7 @@ class edgeDetectionTest(unittest.TestCase):
             pt2 *= scale
             pt2 += transl
             
-            pt3 = np.array([[320],[240+1000],[1]])
+            pt3 = np.array([[2304],[1536+4000],[1]])
             
             m2 = np.dot(invertedCameraMatrix,pt3)
             pt3 = np.dot (Rotn , (m2+tvecs[idx]))
@@ -208,8 +226,9 @@ class edgeDetectionTest(unittest.TestCase):
             
             print 'points',pt2,pt3
             cv2.line(dispImg, (pt2[0],pt2[1]),(pt3[0],pt3[1]),(255,0,0), 4)
-        cv2.imshow('cam',dispImg)
-        cv2.waitKey()
+        cv2.imwrite('calibration/5/5/cameras.jpg',dispImg)
+#         cv2.imshow('cam',dispImg)
+#         cv2.waitKey()
         
         print 'errors',error
        
