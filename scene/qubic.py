@@ -171,9 +171,9 @@ class QubicObject(object):
         img - obraz ostateczny
         Bmap - empty map
         '''
-        #szukanie konturow nalezacych do scian
+        
         for kk,wall in walls.iteritems():
-            
+            #szukanie konturow nalezacych do scian
             for edge_label in edgeLabels:
                 
                 indexes = np.where(edgeLabelsMap == edge_label)
@@ -187,7 +187,7 @@ class QubicObject(object):
                     
                     wall.contours.append(c)
                     wall.contoursDict[edge_label] = c
-                    
+            #szukanie wezlow nalezacych do scian
             for kk,node in nodes.iteritems():
                 values = wall.wallDistance[node]
                 max_value = np.max(values)

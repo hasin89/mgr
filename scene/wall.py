@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Created on Jan 8, 2015
 
@@ -6,6 +7,7 @@ Created on Jan 8, 2015
 import cv2
 import numpy as np
 import func.analise as an
+from func import objects as obj
 
 class Wall(object):
     '''
@@ -34,7 +36,7 @@ class Wall(object):
         #defect obrysu
         defs = cv2.convexityDefects(cnt,hull)
         self.hullDefects = defs
-        self.analyzeDefects(defs)
+        self.convex = self.analyzeDefects(defs,cnt)
         
         # map of the distances from the wall
 #         wallInverted = np.where(labelsMap == label ,0,1).astype('uint8')
@@ -47,10 +49,11 @@ class Wall(object):
         
         self.vertexes = []
         
-    def analyzeDefects(self,defs):
+    def analyzeDefects(self,defs,cnt,treshold = 20):
         fars = []
+        lines = []
         for kk, defects in enumerate(defs): 
-                cnt = self.cnt
+                
                 for jj in range(defects.shape[0]):
                     s,e,f,d = defects[jj]
                     
@@ -64,13 +67,14 @@ class Wall(object):
                     
                     distance = an.calcDistFromLine(far, line)
                     
-                    if distance > 20:
+                    if distance > treshold:
                         print 'wielobok wypukly. Punkt:',far
                         fars.append(far)
+                        lines.append((start, end))
         if len(fars)>0:
-            self.convex = (True,fars)
+            return (True,fars,lines)
         else:
-            self.convex = (False,fars)
+            return (False,fars,lines)
     
     
     def findPotentialCorners(self):
@@ -103,3 +107,92 @@ class Wall(object):
             return indexes
         else:
             return []
+        
+        
+    def getLinesCrossings(self):
+        '''
+        zwraca punkty bedące przecięciami podanych prostych
+    
+        lines - lista prostych będących krotkami [ (a,b,c) , ... ]
+        edge - płótno
+    
+        return [ (x,y) ] - lista puntków będacych przecieciami
+        '''
+        lines = []
+        shape = self.map.shape
+        boundaries = np.array([[0,0],[shape[1],0],[shape[1],shape[0]],[0,shape[0]]])
+        
+        contours = self.contours
+        for c in contours:
+            lines.extend(c.lines)
+        
+        linesGeneral = []
+    
+        for (rho, theta) in lines:
+            # blue for infinite lines (only draw the 5 strongest)
+            a,b,c = an.convertLineToGeneralForm((rho,theta),shape)
+            linesGeneral.append((a,b,c))
+            
+        
+        crossing = []
+        triple = {}
+        fars = self.convex
+        
+        for k in linesGeneral:
+            count = 0
+            for l in linesGeneral:
+                if k == l:
+                    continue
+                
+                p = an.get2LinesCrossing(k,l)
+                # sprawdź czy leży wewnątrz strefy
+                if p != False:
+                    isinside = cv2.pointPolygonTest(boundaries,p,0)
+                    if isinside>0:
+                        dist = self.wallDistance[p[1],p[0]]
+                        if dist<30:
+                            if p != False:
+                                count += 1
+                                #jesli ten punkt lezy blisko punktu wkleslosci to linia bedzie miala 3 przeciecia,
+                                #ale to jest ok, wiec nie licz tego punktu
+                                if len(fars[1]) > 0:
+                                    for f in fars[1]:
+                                        dist = an.calcLength(p, f)
+                                        if dist < 20:
+                                            count -= 1
+                                
+                                if p in crossing:
+                                    
+                                    continue
+                                crossing.append(p)
+                                
+                    else:
+                        pass
+            if count > 2:
+#                 print 'potrojny'
+                #zabierz trzy ostatnie punkty przeciec
+                triple[k] = crossing[-count:]
+            
+#         print 'triples:',triple
+        #jeśli są jakieś linie z 3 punktami przeciecia, co niepowinno sie zdarzyc
+        if len(triple) > 0 and fars[0] and False:
+            
+            # dla lini zawierajacych 3 punkty przeciecia i nie jest to punkt wkleslosci        
+            keys = [k for k,v in triple.iteritems() if len(v)>2]
+            for k in keys:
+                points = triple[k]
+                #wywal wszystkie punkty tej lini z listy przeciec jesli tam sa
+                for p1 in points:
+                    if p1 in crossing:
+                        crossing.remove(p1)
+                pair = an.getMostSeparatedPointsOfLine(points)
+                    
+                #dwa najbardziej od siebie odlegle punkty dodaj do listy przeciec
+                for p in pair:
+                    if p in crossing:
+                        continue
+                    else:
+                        crossing.append(p)
+    
+        print 'crossings :', crossing
+        return crossing, fars#,poly,vertexes

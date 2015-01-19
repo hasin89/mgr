@@ -352,6 +352,20 @@ def calcLength(p1,p2):
     dist = sqrt(pow(x2-x1,2)+pow(y2-y1,2))
     return dist
 
+def getMostSeparatedPointsOfLine(points):
+    '''
+    znajdz najbardziej od siebie odlegle punty
+    '''
+    max = 0
+    for p1 in points:
+        for p2 in points:
+            if p1 == p2:
+                continue
+            dist = calcLength(p1, p2)
+            if dist>max:
+                max = dist
+                pair = [p1,p2]
+    return pair
 
 def getInnerSegments(otherLines,shape,poly):
     '''

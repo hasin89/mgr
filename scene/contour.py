@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Created on Jan 8, 2015
 
@@ -118,57 +119,68 @@ class Contour(object):
         return contour
        
     def getLines(self):
-        #znaldz linie hougha
-        rho = 1
-        theta = np.pi/180
-        threshold = 20
-        
-        if (self.wayPoint is not None):
-            points = self.points
-            linesResult = np.array([])
-            counter = 0
-            for i in range(len(self.wayPoint)):
-                far = (self.wayPoint[i][0][0],self.wayPoint[i][0][1])
-                print far
-                mapI = np.zeros_like(self.map)
-                
-                idx = points.index(far)
-                if idx == 0 :
-                    continue
-                print 'index',idx
-                
-                indexes = map(np.array,np.transpose(np.array(points[:idx])))
-                points = points[idx:]
-                mapI[indexes] = 1
-                
-                linesI = cv2.HoughLines(mapI,rho,theta,threshold)
-                
-                if linesI is not None and len(linesI[0])>0:
-                    print 'lines size',len(linesI[0])
-                    counter += 1
-                    linesResult = np.append(linesResult, linesI[0][0])
-            print 'size',len(self.wayPoint)
-            linesR = np.reshape(linesResult,(counter,2))
-            print linesR
-            self.lines = linesR
-            
+        if self.lines is not None:
+            return self.lines
         else:
-                    
-            lines = cv2.HoughLines(self.map,rho,theta,threshold)
-            self.lines = lines
+            #znaldz linie hougha
+            rho = 1
+            theta = np.pi/180
+            tresh = self.map.shape[0]*0.05
+            threshold = 20
             
-            if lines is not None and len(lines[0])>0:
-                self.lines = lines[0]
-    #             mark.drawHoughLines(lines[0][:3], image6, (128,0,128), 1)
+            if (self.wayPoint is not None):
+                points = self.points
+                linesResult = np.array([])
+                counter = 0
+                for i in range(len(self.wayPoint)):
+                    far = (self.wayPoint[i][0][0],self.wayPoint[i][0][1])
+                    mapI = np.zeros_like(self.map)
+                    
+                    #index punktu polilini na konturze
+                    idx = points.index(far)
+                    #pomiń pierwszy punkt konturu
+                    if idx == 0 :
+                        continue
+                    
+                    #wspolrzedne punktow o indexie w konturze mniejszym niz index punktu polilini
+                    indexes = map(np.array,np.transpose(np.array(points[:idx])))
+                    
+                    #pomniejsz dostepne punty dla nastepnej iteracji
+                    points = points[idx:]
+                    mapI[indexes] = 1
+                    
+                    linesI = cv2.HoughLines(mapI,rho,theta,threshold)
+                    
+                    if linesI is not None and len(linesI[0])>0:
+                        counter += 1
+                        linesResult = np.append(linesResult, linesI[0][0])
+                linesR = np.reshape(linesResult,(counter,2))
+                if len(linesR)>1:
+#                     print 'lines',linesR
+                    pass
+                self.lines = linesR
+                
             else:
-                self.lines = None
+                        
+                lines = cv2.HoughLines(self.map,rho,theta,threshold)
+                self.lines = lines
+                
+                if lines is not None and len(lines[0])>0:
+                    self.lines = lines[0]
+                else:
+                    self.lines = None
+            return self.lines
 
     def aproximate(self):
-        start = self.begining
+        '''
+            aproximate the contour with the polygon
+            self.wayPoint - aproximation polygon vertexes
+        '''
         tresh = 30
+#         print 'tresh:', len(self.points)*0.15
+        tresh = self.map.shape[0]*0.05 
         polygon = cv2.approxPolyDP(np.asarray(self.points),tresh, False)
-        if max > 30:
-            self.wayPoint = polygon
+        self.wayPoint = polygon
         return polygon
     
     def findCornersOnContour(self,size):
@@ -189,3 +201,4 @@ class Contour(object):
             return indexes
         else:
             return []
+        
