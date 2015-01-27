@@ -10,13 +10,15 @@ from calculations.labeling import LabelFactory
 from wall import Wall
 import ContourDectecting
 from contour import Contour
+import func.analise as an
 
 class QubicObject(object):
     '''
     klasa zawierajaca obiekt szescianu
     '''
 
-
+    vertexes =  None
+    
     def __init__(self,objectZone):
         '''
         Constructor
@@ -48,7 +50,45 @@ class QubicObject(object):
         
         self.getWallsProperties(walls,edgeLabels,edgeLabelsMap,nodes)
         
+        self.getMyVertexes(walls)
+                    
+        self.walls = walls
         
+    def getMyVertexes(self,walls,treshold = 10):
+        if self.vertexes is not None:
+            return self.vertexes
+        vertexes = []
+        vertexes2 = []
+        for kk,wall in walls.iteritems():
+            if wall.shadow == True:
+                continue
+            vertexes.extend(wall.vertexes)
+        pairs = {}
+        stack = list(vertexes)
+        for v1 in vertexes:
+            pairs[v1] = [v1]
+            for i,v2 in enumerate(stack):
+                if v1 == v2:
+                    continue 
+                dist = an.calcLength(v1, v2)
+                
+                if dist < treshold:
+                    pairs[v1].append(stack[i])
+                    
+        for k,v in pairs.iteritems():            
+            px,py = (0,0)
+            count = len(v)
+            for p in v:
+                px += p[0]
+                py += p[1]
+                    
+            px = px/count
+            py = py/count
+            vertexes2.append((px,py))
+        vertexes2 = map(tuple,np.unique(vertexes2))
+        
+        self.vertexes = vertexes2
+        return vertexes2
     
     def getEdges(self):
         '''
@@ -195,5 +235,14 @@ class QubicObject(object):
                 if max_value < 20 and min_value>1:
                     #node belong to the wall
                     wall.nodes.append(node)
-                    
+            
+            crossings,fars = wall.getLinesCrossings()
+            vertexes = wall.getVertexes(crossings)
+            
+            if wall.convex[0] == True and wall.convex_point is not None:
+                print 'podzielny'
+                idx = wall.vertexes.index(wall.convex_point)
+                if len(wall.vertexes) == 6:
+                    wall.conterpoint = wall.vertexes[(idx+3)%6]
+                    print 'drugi punkt', wall.conterpoint
         return walls    

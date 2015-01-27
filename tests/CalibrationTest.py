@@ -34,6 +34,7 @@ class edgeDetectionTest(unittest.TestCase):
         for idx in range(numBoards):
             nr = idx + 1
             filenames[idx] =  basePath + str(nr) + ".jpg"
+            print basePath + str(nr) + ".jpg"
         
         return filenames
     
@@ -73,7 +74,7 @@ class edgeDetectionTest(unittest.TestCase):
             print 'not found', filename
             
         cv2.drawChessboardCorners(gray, board_size, corners, True);
-        cv2.imwrite('calibration/5/5/corners_'+filename[0:-3]+'.jpg',gray)
+        cv2.imwrite('calibration/1/1/corners_'+filename[0:-3]+'.jpg',gray)
 #         cv2.imshow("corners", gray);
 #         cv2.waitKey(0);
         return corners
@@ -104,7 +105,7 @@ class edgeDetectionTest(unittest.TestCase):
                 cv2.circle(img,(imagePoints2[idx][i][0][0],imagePoints2[idx][i][0][1]),5,(0,255,0),-1)
                 cv2.circle(img,(imagePointsR[idx][i][0][0],imagePoints2[idx][i][0][1]),6,(0,0,255),2)
 #             cv2.imshow("repr",img)
-            cv2.imwrite('calibration/5/5/difference'+str(idx)+'.jpg',img)
+            cv2.imwrite('calibration/1/1/difference'+str(idx)+'.jpg',img)
 #             cv2.waitKey(0)
             
     def showDistortion(self,filenames,numBoards,mtx,dist):
@@ -116,12 +117,12 @@ class edgeDetectionTest(unittest.TestCase):
             
             diff = cv2.absdiff(gray,img2)
             
-            cv2.imwrite('calibration/5/5/distortion'+str(idx)+'.jpg',diff)
+            cv2.imwrite('calibration/1/1/distortion'+str(idx)+'.jpg',diff)
 #             cv2.imshow('n',diff)
 #             cv2.waitKey(0)
         
     def testCalibration(self):
-        numBoards = 14
+        numBoards = 9
         board_w = 10
         board_h = 7
         board_size = (board_w,board_h)
@@ -137,7 +138,7 @@ class edgeDetectionTest(unittest.TestCase):
         corners = []
         
         # list of images
-        basePath = 'calibration/5/'
+        basePath = 'calibration/1/frame0'
         filenames = self.getFilenames(numBoards, basePath)
         points3D = self.get3Dpoints(board_w, board_n)
         
@@ -226,7 +227,7 @@ class edgeDetectionTest(unittest.TestCase):
             
             print 'points',pt2,pt3
             cv2.line(dispImg, (pt2[0],pt2[1]),(pt3[0],pt3[1]),(255,0,0), 4)
-        cv2.imwrite('calibration/5/5/cameras.jpg',dispImg)
+        cv2.imwrite('calibration/1/1/cameras.jpg',dispImg)
 #         cv2.imshow('cam',dispImg)
 #         cv2.waitKey()
         

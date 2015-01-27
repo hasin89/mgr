@@ -79,64 +79,6 @@ class VertexesTest(unittest.TestCase):
         
         return zone
     
-    def eliminateSimilarLines(self,walls):
-        """
-            eliminuje linie zbyt podobne do siebie
-        """
-#         w = Wall()
-        
-        for kk,w in walls.iteritems():
-            
-            for i1, c1 in enumerate(w.contours):
-                deletedLines = []
-                lines1 = c1.getLines()
-                for line in lines1:
-                    for i2, c2 in enumerate(w.contours):
-                        if c1.label == c2.label:
-                            continue
-                        lines2 = c2.getLines()
-                        for l in lines2:
-                            x = abs(l[1]-line[1])
-                            value = cos(x)
-                            #TODO: - jeśli znajdzie się para prostych równoległych,
-                            # ale odległych o znaczną odległość (równoległe boki) to trzeba temu bedzie zaradzić
-                            if value>0.9:
-                                print 'similar',value,l,line
-                                #JEŚLI SĄ RÓWNOLEGŁE ALE NIE BLISKO SIEBIE TO NIE LICZ ICH
-                                shape = w.map.shape
-                                lG = an.convertLineToGeneralForm((l[0], l[1]), shape)
-                                lineG = an.convertLineToGeneralForm((line[0], line[1]), shape)
-                                cross = an.get2LinesCrossing(lG, lineG)
-                                if cross != False:
-                                    boundaries = np.array([[0,0],[shape[1],0],[shape[1],shape[0]],[0,shape[0]]])
-                                    isinside = cv2.pointPolygonTest(boundaries,cross,0)
-                                    
-                                    if isinside>0:
-                                        print 'redundant'
-                                        print l
-                                        print line
-                                        print ''
-                                        if len(lines1) > len(lines2):
-                                            final = []
-                                            linesTMP = walls[kk].contours[i2].getLines()
-                                            for ltmp in linesTMP:
-                                                if ltmp[0] != l[0] and ltmp[1] != l[1]:
-                                                    final.append(ltmp)
-                                            walls[kk].contours[i2].lines = np.array(final)
-                                            
-                                            
-                                        else:
-                                            final = []
-                                            linesTMP = walls[kk].contours[i1].getLines()
-                                            for ltmp in linesTMP:
-                                                if ltmp[0] != line[0] and ltmp[1] != line[1]:
-                                                    final.append(ltmp)
-                                            walls[kk].contours[i1].lines = np.array(final)
-                for d in deletedLines:
-                    if d in lines1:
-                        print 'rmove'
-        
-        return walls
     
     def eliminateSimilarPoints(self,crossings,corners):
         for p1 in crossings:
@@ -176,10 +118,18 @@ class VertexesTest(unittest.TestCase):
             if wall.convex[0]:
                 (start, end) = wall.convex[2][0]
                 point = wall.convex[1][0]
+                #znajdź przeciecie najblizsze temu punktowi
+                min0 = 1000
+                for cross in crossings:
+                    d0 = an.calcLength(point, cross)
+                    if d0<min0:
+                        min0 = d0
+                        cross_defect = cross
                 min1 = 1000
                 min2 = 1000
                 
-                #kazdy punkt obwiedni dodaj do wierzchołków i znajdx punkty najbliższe startu i końca
+                #kazdy punkt obwiedni dodaj do wierzchołków
+                #i dla lini defektowej znajdź punkty najbliższe jej startu i końca 
                 for p in polygonG2:
                     p = (p[0][0],p[0][1])
                     vertexes.append(p)
@@ -194,45 +144,11 @@ class VertexesTest(unittest.TestCase):
                         e = p
                 idx1 = vertexes.index(s)
                 idx2 = vertexes.index(e)
+                # indexy beda kolejno po sobie chba ze akurat beda na brzegach listy
                 if idx2-idx1 == 1:
-                    vertexes.insert(idx2, point)
+                    vertexes.insert(idx2, cross_defect)
                 else:
-                    vertexes.insert(idx1, point)
-                    
-#                 for idx range(len(vertexes)):
-#                     an.calcDistFromLine(point, line)
-                    
-#               jesli jest wiecej niż 6 wierzchołków to jest coś nie tak  
-#             if len(vertexes)>6:
-#                     vectors = []
-#                     for n in range(len(vertexes)-1):
-#                         vec = (vertexes[n][0]-vertexes[n+1][0],vertexes[n][1]-vertexes[n+1][1])
-#                         vectors.append(vec)
-#                     vec = (vertexes[-1][0]-vertexes[0][0],vertexes[-1][1]-vertexes[0][1])
-#                     vectors.append(vec)
-#                     
-#                     for j in range(len(vectors)):
-#                         if  vectors[j][0] < 5 and  vectors[j][1] < 5:
-#                             vertexes.remove(vertexes[j])
-#                             flag = True
-#                             break
-#                             
-#                             
-#                     print 'vectors',vectors
-#                     if not flag:
-#                         for j in range(len(vectors)):
-#                             if abs(vectors[j][0]) == 0:
-#                                 vectors[j] = (0 , vectors[j][1] )
-#                             else:
-#                                 vectors[j] = (vectors[j][0] / abs(vectors[j][0]) , vectors[j][1] / abs(vectors[j][0]))
-#                                 
-#                         for i in range(len(vectors)-1):
-#                             if vectors[i] == vectors[i+1]:
-#                                 vertexes.remove(vertexes[i])
-#                                 break
-#                         if vectors[-1] == vectors[0]:
-#                             vertexes.remove(vertexes[-1])
-#                         print 'vectors',vectors
+                    vertexes.insert(idx1, cross_defect)
                     
             #dla wypukłych
             else:        
@@ -240,6 +156,26 @@ class VertexesTest(unittest.TestCase):
                     p = (p[0][0],p[0][1])
                     vertexes.append(p)
             print 'vertex',vertexes
+            
+            #vertexy sa uporzadkowane wiec mozna wyeliminowac te punkty ktore sa nadal na jednej lini
+            lines = wall.lines
+            for line in lines:
+                img = np.zeros_like(wall.map)
+                mark.drawHoughLines([line], img, 1, 2)
+                values = []
+                for i,v in enumerate(vertexes):
+                    values.append(img[v[1],v[0]])
+                
+                if sum(values) > 2:
+                    if values[0] == 1 and values[-1] == 1 and values[2] == 1:
+                        vertexes.remove(vertexes[0])
+                        pass
+                    if values[0] == 1 and values[-1] == 1 and values[-2] == 1:
+                        vertexes.remove(vertexes[-1])
+                        pass
+                    else:
+                        index =  values.index(1)+1
+                        vertexes.remove(vertexes[index])
         return vertexes
         
        
@@ -304,50 +240,47 @@ class VertexesTest(unittest.TestCase):
             colors = getColors(len(wall.contours))
             ii = 0
             
+#                         ii +=1
+            
             for c in wall.contours:
                 
-                polygon  = c.polygon
-                if len(polygon)>1:
-                    for i in range(len(polygon)-1):
-                        cv2.line(image3, (polygon[i][0][1],polygon[i][0][0]), (polygon[i+1][0][1],polygon[i+1][0][0]),(255,255,255),1)
-                
-                ll = map(np.array,np.transpose(np.array(c.points)))
-                image3[ll] = (0,255,255)
                 c.getLines()
                 lines = c.lines
                 if lines is not None:
-#                     print lines
-    
-                    #eliminate close to each other lines:
-                    ld = LineDetector(zone.view.shape)
-                    
-                    
-                    lines2 = lines
-                    
+                     
                     if c.wayPoint is not None:
-                        mark.drawHoughLines(lines, image3, (128,128,128), 1)
-                    else:
-                        mark.drawHoughLines(lines[:1], image3, (128,128,255), 1)
-                    
-                    if c.wayPoint is not None:
-                        mark.drawHoughLines(lines2, image3, colors[ii], 2)
+                        mark.drawHoughLines(lines, image3, colors[ii], 2)
                         ii +=1
-                    else:
-                        mark.drawHoughLines(lines2[:1], image3, (128,255,255), 2)
-                        
-            image3[wall.map == 1] = (255,255,255)    
+#                     else:
+# #                         mark.drawHoughLines(lines[:1], image3, (128,255,255), 2)
+#                         print 'nie zdarza sie'
+#                         raise Exception
+                
+                # zaznaczenie konturu z Sobela        
+                ll = map(np.array,np.transpose(np.array(c.points)))
+                image3[ll] = (0,255,255)    
+            
+            #zaznaczenie powieszhni ściany           
+            image3[wall.map == 1] = (255,255,255)   
+            
+             
 #             for p in corners:
 #                 cv2.circle(image3,p,5,(255,0,255),2)           
             crossings,fars = wall.getLinesCrossings()
+            
+            mark.drawHoughLines(wall.lines, image3, (255,50,05), 2)
 #             for i in range(0,len(mainBND)-1):
 #                 mark.drawMain(image3,(mainBND[i][0],mainBND[i][1]) ,(mainBND[i+1][0],mainBND[i+1][1]))
 
 #             crossings = self.eliminateSimilarPoints(crossings,corners)
             
-            vertexes = self.getVertexes(wall, crossings)
+            for vv in crossings:
+                cv2.circle(image3,(vv[0],vv[1]),6,(10,0,255),-1)
+                
+            vertexes = wall.getVertexes(crossings)
             
             for vv in vertexes:
-                cv2.circle(image3,(vv[0],vv[1]),4,(255,0,0),-1) 
+                cv2.circle(image3,(vv[0],vv[1]),6,(255,0,255),-1) 
             
             
 #             for cc in crossings:

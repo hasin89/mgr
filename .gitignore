@@ -6,3 +6,8 @@ img/*
 .project
 .pydevproject
 .settings*
+*.p
+*.7z
+*.txt
+*.NEF
+*.zip

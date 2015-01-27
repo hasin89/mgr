@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 import func.analise as an
 from func import objects as obj
+from math import cos
+import func.markElements as mark
 
 class Wall(object):
     '''
@@ -23,6 +25,8 @@ class Wall(object):
         self.map = wallMap
         self.label = label
         
+        self.shadow = self.isShadow()
+        
         #kontur sciany        
         cnts = cv2.findContours(wallMap,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
         cnt = cnts[0][0]
@@ -37,6 +41,8 @@ class Wall(object):
         defs = cv2.convexityDefects(cnt,hull)
         self.hullDefects = defs
         self.convex = self.analyzeDefects(defs,cnt)
+        self.convex_point = None
+        self.conterpoint = None
         
         # map of the distances from the wall
 #         wallInverted = np.where(labelsMap == label ,0,1).astype('uint8')
@@ -48,6 +54,9 @@ class Wall(object):
         self.nodes = []
         
         self.vertexes = []
+        
+        self.lines = []
+        
         
     def analyzeDefects(self,defs,cnt,treshold = 20):
         fars = []
@@ -108,6 +117,76 @@ class Wall(object):
         else:
             return []
         
+    def __getLines(self):
+        '''
+            sumuje linie nalezace do poszczegolnych konturow
+        '''
+        lines = []
+        contours = self.contours
+        contoursMap = np.zeros_like(self.map)
+        for c in contours:
+            linesC = c.getLines()
+            if c.wayPoint is not None:
+                lines.extend(linesC)
+                contoursMap[c.map==1] = 1
+            else:
+                lines.extend(linesC[:1])
+            
+        #eliminacja prawie identycznych lini rozniacych sie o niewielki kat i wynikajacych z tolerancji lamanej
+        for n,l1 in enumerate(lines):
+            if l1 is None:
+                continue
+            for m,l2 in enumerate(lines):
+                if l2 is None:
+                    continue 
+                if l1[0] == l2[0] and l1[1] == l2[1]:
+                    break
+                x = cos(abs(l1[1]-l2[1]))
+                if x > 0.95:
+                    shape = self.map.shape
+                    a1,b1,c1 = an.convertLineToGeneralForm((l1[0], l1[1]), shape)
+                    a2,b2,c2 = an.convertLineToGeneralForm((l2[0], l2[1]), shape)
+                    p = an.get2LinesCrossing((a1, b1, c1), (a2, b2, c2))
+                    if p != False:
+                        px,py = p
+                        #przeciecie na obrazie
+                        if 0 < px and px < shape[1] and 0 < py and py < shape[1]:
+                            # znajdz która jest dokladniejsza
+                            int1 = self.__getFitMeasure(l1, contoursMap)
+                            int2 = self.__getFitMeasure(l2, contoursMap)
+                            if int1 > int2:
+                                lines[m] = None
+                            else:
+                                lines[n] = None
+                    elif x == 1 and abs(l1[0]-l2[0]) < 5:
+                        int1 = self.__getFitMeasure(l1, contoursMap)
+                        int2 = self.__getFitMeasure(l2, contoursMap)
+                        if int1 > int2:
+                            lines[m] = None
+                        else:
+                            lines[n] = None
+                        
+        #usuwanie None z listy lini
+        finalLines = []
+        for l in lines:
+            if l == None:
+                continue
+            finalLines.append(l)
+        self.lines = finalLines
+        
+        return self.lines    
+
+    def __getFitMeasure(self,line,contoursMap):
+        '''
+            mierzy jak bardzo dana linia pokrywa sie z konturem
+        '''
+        lineMap1 = np.zeros_like(self.map)
+        mark.drawHoughLines([line], lineMap1, 1, 2)
+        coverage1 = cv2.bitwise_and(lineMap1,contoursMap)
+        int1 = np.sum(coverage1)
+        
+        return int1
+        
         
     def getLinesCrossings(self):
         '''
@@ -122,10 +201,7 @@ class Wall(object):
         shape = self.map.shape
         boundaries = np.array([[0,0],[shape[1],0],[shape[1],shape[0]],[0,shape[0]]])
         
-        contours = self.contours
-        for c in contours:
-            lines.extend(c.lines)
-        
+        lines = self.__getLines()
         linesGeneral = []
     
         for (rho, theta) in lines:
@@ -135,11 +211,9 @@ class Wall(object):
             
         
         crossing = []
-        triple = {}
         fars = self.convex
         
         for k in linesGeneral:
-            count = 0
             for l in linesGeneral:
                 if k == l:
                     continue
@@ -150,49 +224,106 @@ class Wall(object):
                     isinside = cv2.pointPolygonTest(boundaries,p,0)
                     if isinside>0:
                         dist = self.wallDistance[p[1],p[0]]
-                        if dist<30:
-                            if p != False:
-                                count += 1
-                                #jesli ten punkt lezy blisko punktu wkleslosci to linia bedzie miala 3 przeciecia,
-                                #ale to jest ok, wiec nie licz tego punktu
-                                if len(fars[1]) > 0:
-                                    for f in fars[1]:
-                                        dist = an.calcLength(p, f)
-                                        if dist < 20:
-                                            count -= 1
-                                
+                        if dist<50:
+                            if p != False:                                
                                 if p in crossing:
-                                    
                                     continue
                                 crossing.append(p)
-                                
                     else:
                         pass
-            if count > 2:
-#                 print 'potrojny'
-                #zabierz trzy ostatnie punkty przeciec
-                triple[k] = crossing[-count:]
             
-#         print 'triples:',triple
-        #jeśli są jakieś linie z 3 punktami przeciecia, co niepowinno sie zdarzyc
-        if len(triple) > 0 and fars[0] and False:
-            
-            # dla lini zawierajacych 3 punkty przeciecia i nie jest to punkt wkleslosci        
-            keys = [k for k,v in triple.iteritems() if len(v)>2]
-            for k in keys:
-                points = triple[k]
-                #wywal wszystkie punkty tej lini z listy przeciec jesli tam sa
-                for p1 in points:
-                    if p1 in crossing:
-                        crossing.remove(p1)
-                pair = an.getMostSeparatedPointsOfLine(points)
-                    
-                #dwa najbardziej od siebie odlegle punkty dodaj do listy przeciec
-                for p in pair:
-                    if p in crossing:
-                        continue
-                    else:
-                        crossing.append(p)
     
-        print 'crossings :', crossing
+#         print 'crossings :', crossing
         return crossing, fars#,poly,vertexes
+    
+    def getVertexes(self,crossings):
+        '''
+        zwraca uporzadkowana liste wierzcholkow
+        
+        bez srodkow punktow potrojnych -> wciaz z bledami
+        '''
+        vertexes = []
+        if len(crossings)>0:
+            points = np.array([crossings])
+            polygonG = cv2.convexHull(points,returnPoints = True)
+            polygonG2 = map(tuple,polygonG)
+            #dla wklesłych
+            if self.convex[0]:
+                (start, end) = self.convex[2][0]
+                point = self.convex[1][0]
+                #znajdź przeciecie najblizsze temu punktowi
+                min0 = 1000
+                for cross in crossings:
+                    d0 = an.calcLength(point, cross)
+                    if d0<min0:
+                        min0 = d0
+                        cross_defect = cross
+                min1 = 1000
+                min2 = 1000
+                
+                #kazdy punkt obwiedni dodaj do wierzchołków
+                #i dla lini defektowej znajdź punkty najbliższe jej startu i końca 
+                for p in polygonG2:
+                    p = (p[0][0],p[0][1])
+                    vertexes.append(p)
+                    
+                    d1 = an.calcLength(p, start)
+                    d2 = an.calcLength(p, end)
+                    if d1<min1:
+                        min1 = d1
+                        s = p
+                    if d2<min2:
+                        min2 = d2
+                        e = p
+                idx1 = vertexes.index(s)
+                idx2 = vertexes.index(e)
+                # indexy beda kolejno po sobie chba ze akurat beda na brzegach listy
+                if idx2-idx1 == 1:
+                    vertexes.insert(idx2, cross_defect)
+                else:
+                    vertexes.insert(idx1, cross_defect)
+                self.convex_point = cross_defect
+                    
+            #dla wypukłych
+            else:        
+                for p in polygonG2:
+                    p = (p[0][0],p[0][1])
+                    vertexes.append(p)
+            
+            #vertexy sa uporzadkowane wiec mozna wyeliminowac te punkty ktore sa nadal na jednej lini
+            lines = self.lines
+            for line in lines:
+                img = np.zeros_like(self.map)
+                mark.drawHoughLines([line], img, 1, 2)
+                values = []
+                for i,v in enumerate(vertexes):
+                    if v == self.convex_point:
+                        
+                        values.append(0)
+                    else:
+                        values.append(img[v[1],v[0]])
+                
+                if sum(values) > 2:
+                    if values[0] == 1 and values[-1] == 1 and values[2] == 1:
+                        vertexes.remove(vertexes[0])
+                        pass
+                    if values[0] == 1 and values[-1] == 1 and values[-2] == 1:
+                        vertexes.remove(vertexes[-1])
+                        pass
+                    else:
+                        index =  values.index(1)+1
+                        vertexes.remove(vertexes[index])
+        self.vertexes = vertexes
+#         print 'vertex',vertexes
+        return vertexes
+    
+    def isShadow(self):
+        wMap = self.map
+        bottom = wMap[-4,:]
+        nz = np.nonzero(bottom)
+        siz = len(nz[0])
+        if siz > 0:
+            print 'cien'
+            return True
+        else:
+            return False
