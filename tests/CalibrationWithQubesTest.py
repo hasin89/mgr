@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Created on Sep 27, 2014
 
@@ -6,25 +7,23 @@ Created on Sep 27, 2014
 import unittest
 import numpy as np
 from calculations import triangulation,DecompPMat
-import cv2
-import func.trackFeatures as features
 from scene.edge import edgeMap
-import func.markElements as mark
-from numpy.core.numeric import dtype
 import pickle
-import numpy as np
-from calculations import triangulation, DecompPMat, labeling
 import cv2
 import func.markElements as mark
 from scene.mirrorDetector import mirrorDetector
 from scene.zone import Zone
 from scene.objectDetector2 import objectDetector2
 from calculations.calibration import CalibrationFactory
-
+from scene.scene import Scene
+from scene import edgeDetector
+from scene.qubic import QubicObject
+import sys,os
 
 class edgeDetectionTest(unittest.TestCase):
 
-
+    writepath = ''
+    
     def setUp(self):
         np.set_printoptions(precision=4)
 
@@ -33,53 +32,200 @@ class edgeDetectionTest(unittest.TestCase):
         pass
     
     def getZones(self,folder,pic):
-        factor = 1
-        filename = '../img/%d/%d.JPG' % (folder, pic)
-        scene = self.loadImage(filename, factor)
-        
-        md = mirrorDetector(scene)
-        md.findMirrorZone()
-        
-        od = objectDetector2(md,scene.view)
-        zoneA,zoneB,zoneC,zoneD = od.detect()
-        
-        return scene,zoneA,zoneB,zoneC,zoneD
-       
-    def loadZone(self,folder,pic,letter):
-        factor = 1
-        filename = '../img/results/automated/%d/objects2/%d_objects_on_mirror_%s.jpg' % (folder,pic,letter)
-        zone = self.loadImage(filename, factor)
-        if folder ==9 and pic == 1 and letter == 'B':
-            self.POINTS = [
-                           (2544,691),
-                           (2622,624),
-                           (2760,671),
-                           (2684,740),
-                           (2748,806),
-                           (2533,827),
-                           (2672,877)
-                           ]
+        path1 = self.writepath+ 'pickle_zone_A_%d.p' % (self.i)
+        path2 = self.writepath+ 'pickle_zone_C_%d.p' % (self.i)
+        path3 = self.writepath+ 'pickle_scene_%d.p' % (self.i)
+        path4 = self.writepath+ 'pickle_md_%d.p' % (self.i)
+        if os.path.exists(path1) and os.path.exists(path2) and os.path.exists(path3) and os.path.exists(path4):
+            print 'reading'
+            fname = path1
+            f = open(fname,'rb')
+            zoneA = pickle.load(f)
+            f.close()
+            fname = path2
+            f = open(fname,'rb')
+            zoneC = pickle.load(f)
+            f.close()
+            fname = path3
+            f = open(fname,'rb')
+            scene = pickle.load(f)
+            f.close()
+            fname = path4
+            f = open(fname,'rb')
+            md = pickle.load(f)
+            f.close()
             
+        else:
         
-        return zone
+        
+            factor = 1
+            filename = '../img/%d/%d.JPG' % (folder, pic)
+            scene = self.loadImage(filename, factor)
+            
+            md = mirrorDetector(scene)
+            mz = md.findMirrorZone()
+            
+            f = self.writepath+ '%d_mirror_zone.jpg' % (self.i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, mz.preview)
+            
+            f = self.writepath+ '%d_edges_detection.jpg' % (self.i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, md.scene.view)
+            
+            od = objectDetector2(md,scene.view)
+            zoneA,zoneC = od.detect(chessboard=True)
+            
+            f = self.writepath+ '%d_A_zone.jpg' % (self.i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, zoneA.image)
+            
+            f = self.writepath+ '%d_C_zone.jpg' % (self.i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, zoneC.image)
+            
+            #zapisz na póxniej
+            fname = path1
+            f = open(fname,'wb')
+            pickle.dump(zoneA, f)
+            f.close()
+            
+            fname = path2
+            f = open(fname,'wb')
+            pickle.dump(zoneC, f)
+            f.close()
+            
+            fname = path3
+            f = open(fname,'wb')
+            pickle.dump(scene, f)
+            f.close()
+            
+            fname = path4
+            f = open(fname,'wb')
+            pickle.dump(md, f)
+            f.close()
+        
+        return scene,zoneA,zoneC,md
     
-        
-    def testCalibration(self):
-        numBoards = 9#14
+    def loadImage(self, filename, factor=1):
+        print(filename)
+        imgT = cv2.imread(filename)
+#         factor = 0.25
+        shape = (round(factor * imgT.shape[1]), round(factor * imgT.shape[0]))
+        imgMap = np.empty(shape, dtype='uint8')
+        imgMap = cv2.resize(imgT, imgMap.shape)
+        scene = Scene(imgMap)
+        return scene
+       
+    def calibrate(self,numBoards):
+        numBoards = 2#14
         board_w = 10
         board_h = 7
-        flag = True
+        flag = False
         
-        
-        CF = CalibrationFactory(numBoards,board_w,board_h,flag,'../img/10/','calibration/1/1/')
+        CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'/calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
         CF.showCamerasPositions()
         
         mtx, dist, rvecs, tvecs = CF.mtx,CF.dist,CF.rvecs,CF.tvecs
+        print mtx
             
         error = CF.reprojectPoints(CF.filenames)
         
         print 'errors',error
         
+    def detect(self,zone,mask,folder, i, letter):
+        pic = i
+        
+        qubic = QubicObject(zone.image)
+        
+        #caly bialy
+        image = qubic.emptyImage.copy()
+        image3 = image.copy()
+        
+        for kk,wall in qubic.walls.iteritems():
+            
+            #zaznaczenie powieszhni ściany           
+            image3[wall.map == 1] = (255,255,255) 
+            for c in wall.contours:
+                ll = map(np.array,np.transpose(np.array(c.points)))
+                image3[ll] = (255,255,0)
+            
+#                 mark.drawHoughLines(c.lines, image3, (128,0,128), 1) 
+            mark.drawHoughLines(wall.lines, image3, (128,0,128), 1)
+                
+        for vv in qubic.vertexes:
+            cv2.circle(image3,(vv[0],vv[1]),1,(10,0,255),2) 
+        if len(qubic.vertexes) > 7:
+#             raise Exception('too much vertexes')
+            pass
+        print 'wierzcholki: ', qubic.vertexes
+        fname = self.writepath+'pickle_vertex_%d_%s.p' % (pic,letter)
+        f = open(fname,'wb')
+        pickle.dump(qubic, f)
+        f.close()
+        
+#         f = open(fname,'rb')
+#         obj = pickle.load(f)
+        
+        f = self.writepath+'%d_lines_%s.jpg' % (pic,letter)
+        print 'savaing to ' + f
+        cv2.imwrite(f, image3)
+        
+        image = zone.image.copy()
+        
+        for vv in qubic.vertexes:
+            cv2.circle(image,(vv[0],vv[1]),1,(10,0,255),2) 
+            
+        f = self.writepath+'%d_punkty_%s.jpg' % (pic,letter)
+        print 'savaing to ' + f
+        cv2.imwrite(f, image)
+            
+        return qubic.vertexes
+    
+    def prepareCalibration(self,md):
+        img = {}
+        image = md.origin
+        y = md.middle[1]
+        
+        img[1] =  Zone(image,0,0,image.shape[1],y)
+        img[2] =  Zone(image,0,y,image.shape[1],image.shape[0]-y)
+        
+        for i in range(1,3):
+            f = self.writepath+'/calibration/src/%d/%d.jpg' % (self.i,i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, img[i].preview)
+        
+    
+    def rrun(self,folder,i):
+        self.folder = folder
+        self.i = i
+        self.writepath = '../img/results/automated/%d/' % folder
+        
+        scene,zoneA,zoneC,md = self.getZones(folder,i)
+        self.prepareCalibration(md)
+        
+        ed = edgeDetector.edgeDetector(zoneA.image)
+        mask = ed.getSobel()
+        vA = self.detect(zoneA,mask,folder, i,'A')
+        
+        ed = edgeDetector.edgeDetector(zoneC.image)
+        mask = ed.getSobel()
+        vC = self.detect(zoneC,mask,folder, i,'C')
+        
+        self.calibrate(2)
+    
+        
+#     def test_10_1(self):
+#         self.rrun(10,1)
+        
+#     def test_10_2(self):
+#         self.rrun(10,2)
+        
+    def test_10_3(self):
+        self.rrun(10,3)
+        
+#     def test_10_4(self):
+#         self.rrun(10,4)   
         
        
        

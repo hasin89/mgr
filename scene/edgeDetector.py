@@ -7,13 +7,6 @@ Created on Oct 31, 2014
 '''
 import cv2
 import numpy as np
-from analyticGeometry import convertLineToGeneralForm
-from zone import Zone
-
-import func.markElements as mark
-
-from calculations.labeling import LabelFactory
-from ContourDectecting import ContourDetector
 
 
 class edgeDetector(object):

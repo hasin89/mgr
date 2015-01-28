@@ -125,7 +125,7 @@ class Contour(object):
             #znaldz linie hougha
             rho = 1
             theta = np.pi/180
-            tresh = self.map.shape[0]*0.05
+            tresh = self.map.shape[0]*0.05 #0.05
             threshold = 20
             
             if (self.wayPoint is not None):
@@ -154,6 +154,8 @@ class Contour(object):
                     if linesI is not None and len(linesI[0])>0:
                         counter += 1
                         linesResult = np.append(linesResult, linesI[0][0])
+                    elif linesI is None:
+                        print 'lines not found for number of points: ',len(self.points) 
                 linesR = np.reshape(linesResult,(counter,2))
                 if len(linesR)>1:
 #                     print 'lines',linesR
@@ -178,7 +180,8 @@ class Contour(object):
         '''
         tresh = 30
 #         print 'tresh:', len(self.points)*0.15
-        tresh = self.map.shape[0]*0.05 
+        tresh = self.map.shape[0]*0.05
+        tresh = len(self.points)*0.1 
         polygon = cv2.approxPolyDP(np.asarray(self.points),tresh, False)
         self.wayPoint = polygon
         return polygon

@@ -83,7 +83,7 @@ class VertexesTest(unittest.TestCase):
     def proceed(self,zone,mask,folder, i, letter):
         pic = i
         
-        qubic = QubicObject(zone)
+        qubic = QubicObject(zone.view)
         
         #caly bialy
         image = qubic.emptyImage.copy()
@@ -92,13 +92,13 @@ class VertexesTest(unittest.TestCase):
         for kk,wall in qubic.walls.iteritems():
             
             #zaznaczenie powieszhni ściany           
-            image3[wall.map == 1] = (255,255,255)   
+            image3[wall.map == 1] = (255,255,255) 
+            
+            mark.drawHoughLines(wall.lines, image3, (128,0,128), 1)  
                 
         for vv in qubic.vertexes:
             cv2.circle(image3,(vv[0],vv[1]),1,(10,0,255),2) 
-        if len(qubic.vertexes) > 7:
-            raise Exception('too much vertexes')
-        print 'wierzcholki: ', qubic.vertexes
+        
         fname = '../img/results/automated/%d/obj5/pickle_vertex_%d_%s.p' % (folder, pic,letter)
         f = open(fname,'wb')
         pickle.dump(qubic, f)
@@ -110,6 +110,10 @@ class VertexesTest(unittest.TestCase):
         f = '../img/results/automated/%d/obj5/%d_lines_%s.jpg' % (folder, pic,letter)
         print 'savaing to ' + f
         cv2.imwrite(f, image3)
+        
+        if len(qubic.vertexes) > 7:
+            raise Exception('too much vertexes')
+        print 'wierzcholki: ', qubic.vertexes
             
         return image,mask
 

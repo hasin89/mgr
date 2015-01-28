@@ -28,7 +28,7 @@ class objectDetector2(object):
         
         self.origin = image_origin
         
-    def detect(self):
+    def detect(self,chessboard=False):
         '''
         detects objects
         
@@ -49,29 +49,37 @@ class objectDetector2(object):
         edge = np.where(dilated>0,255,0)
         
         zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
-        zoneB =  Zone(edge,   mid                 ,mirror_zone.offsetY                                ,mirror_zone.offsetX+mirror_zone.width-mid                  ,md.calculatePointOnLine(mirror_zone.offsetX+mirror_zone.width)[1]-mirror_zone.offsetY)
         zoneC =  Zone(edge,   mirror_zone.offsetX ,md.calculatePointOnLine(mirror_zone.offsetX)[1]    ,mid-mirror_zone.offsetX                                    ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mirror_zone.offsetX)[1])
-        zoneD =  Zone(edge,   mid                 ,md.calculatePointOnLine(mid)[1]                    ,mirror_zone.offsetX+mirror_zone.width-mid                  ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mid)[1] )
+        if not chessboard:
+            zoneB =  Zone(edge,   mid                 ,mirror_zone.offsetY                                ,mirror_zone.offsetX+mirror_zone.width-mid                  ,md.calculatePointOnLine(mirror_zone.offsetX+mirror_zone.width)[1]-mirror_zone.offsetY)
+            zoneD =  Zone(edge,   mid                 ,md.calculatePointOnLine(mid)[1]                    ,mirror_zone.offsetX+mirror_zone.width-mid                  ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mid)[1] )
         
         margin = 50
         zoneA = self.setMargin(zoneA, margin)
-        zoneB = self.setMargin(zoneB, margin)
         zoneC = self.setMargin(zoneC, margin)
-        zoneD = self.setMargin(zoneD, margin)
+        if not chessboard:
+            zoneB = self.setMargin(zoneB, margin)
+            zoneD = self.setMargin(zoneD, margin)
+        
+        
         
         (x,y,w,h) = self.__findObject(zoneA.image)
         zoneA = Zone(self.origin,x+zoneA.offsetX,y+zoneA.offsetY,w,h)
         
-        (x,y,w,h) = self.__findObject(zoneB.image)
-        zoneB = Zone(self.origin,x+zoneB.offsetX,y+zoneB.offsetY,w,h)
-        
         (x,y,w,h) = self.__findObject(zoneC.image)
         zoneC = Zone(self.origin,x+zoneC.offsetX,y+zoneC.offsetY,w,h)
         
-        (x,y,w,h) = self.__findObject(zoneD.image)
-        zoneD = Zone(self.origin,x+zoneD.offsetX,y+zoneD.offsetY,w,h)
+        if not chessboard:
+            (x,y,w,h) = self.__findObject(zoneB.image)
+            zoneB = Zone(self.origin,x+zoneB.offsetX,y+zoneB.offsetY,w,h)
+            
+            (x,y,w,h) = self.__findObject(zoneD.image)
+            zoneD = Zone(self.origin,x+zoneD.offsetX,y+zoneD.offsetY,w,h)
         
-        return zoneA,zoneB,zoneC,zoneD
+        if not chessboard:
+            return zoneA,zoneB,zoneC,zoneD
+        else:
+            return zoneA,zoneC
     
     
     def setMargin(self,zone, margin):

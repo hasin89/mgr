@@ -61,6 +61,8 @@ class LocalizationTest(unittest.TestCase):
             print 'distance from middle:' + str(abs(scene.view.shape[0] / 2 - middle[1]))
             raise Exception('y is probsbly not in the half of the height')
     
+    def test_10_1(self):
+        self.findMirror(10, 1)
 
     def test_8_3(self):
         self.findMirror(8, 3)

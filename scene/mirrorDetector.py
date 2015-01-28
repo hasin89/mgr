@@ -41,6 +41,7 @@ class mirrorDetector(object):
     def __init__(self,scene):
         
         self.scene = scene
+        self.origin = scene.view.copy()
         
         self.edges_mask = self.findEdges(self.scene)
         
@@ -169,7 +170,7 @@ class mirrorDetector(object):
         if left == 0 or right == self.scene.width:
             shift = shift + 5
             left, right = self.__findVerticalEdges(shift)
-           
+        print 'sides',left,right   
         theta = 0
         mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
         
@@ -178,15 +179,63 @@ class mirrorDetector(object):
         
         return self.mirrorZone
     
-    def __findVerticalEdges(self,shift):
+    def __findVerticalEdges(self,shift,chess=False):
         #narysuj kreske na pustym obrazie
         canvas = np.zeros_like(self.edges_mask)
-        
-        mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], canvas, 1, 5)
-        mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], self.scene.view, 1, 5)
-        
-        output = canvas*self.edges_mask
-        
+        chess = True
+        if chess:
+            
+            
+            rho = 1
+            theta = np.pi/180
+            threshold= int(self.edges_mask.shape[0]/4)
+            mask = self.edges_mask.copy()
+            mask[self.middle[1]:,:] = 0
+            
+            
+            k = 10
+            kernel = np.ones((k,k))
+            mask = cv2.dilate(mask,kernel)
+            mask = cv2.erode(mask,kernel)
+            
+            mask2 = cv2.distanceTransform(mask,3,3)
+            tres = self.distanceTreshold * 4
+            
+            mask3 = np.where(mask2>tres,1,0).astype('uint8')
+            k = 50
+            kernel = np.ones((k,k))
+            mask5 = cv2.dilate(mask3,kernel)
+            
+            mask5 = cv2.subtract(mask,mask5).astype('uint8')
+            mask4 = np.where(mask5>0,255,0)
+            
+            lines2 = cv2.HoughLines(mask5,rho,theta,threshold)
+            
+            lines = []
+            for l in lines2[0]:
+                if l[1]>np.pi*0.25 and l[1]<np.pi*0.75:
+                    continue
+                lines.append(l)
+            
+            if lines is not None:
+                mark.drawHoughLines(lines,self.scene.view,(0,0,255),5)
+                canvas2 = canvas.copy()
+                #vertical line
+                mark.drawHoughLines(lines, canvas, 1, 1)
+                #horizontal line
+                mark.drawHoughLines([(self.mirror_line_Hough[0],self.mirror_line_Hough[1])], canvas2, 1, 1)
+                
+                output = canvas*canvas2
+                
+            
+                
+#             left,right = 0,self.scene.width
+        else:
+            mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], canvas, 1, 5)
+            mark.drawHoughLines([(self.mirror_line_Hough[0]-shift,self.mirror_line_Hough[1])], self.scene.view, 1, 5)
+            
+            output = canvas*self.edges_mask
+            
         o1 = np.nonzero(output)
         o2 = np.transpose(o1)
         
@@ -196,13 +245,13 @@ class mirrorDetector(object):
 
         right_side = np.where( (o1[1]-self.middle[0])>0, o1 , 999999 )
         
-        if len(right_side[1])>0:
+        if len(right_side[1])>0 and min(right_side[1])<999999:
             right = min(right_side[1])
         else:
             right = self.scene.width
         
         left_side = np.where( (self.middle[0] - o1[1]-1 )>0, o1 , 0 )
-        if len(left_side[1])>0:
+        if len(left_side[1])>0 and max(left_side[1])<999999:
             left = max(left_side[1])
         else:
             left = 0

@@ -23,7 +23,7 @@ class QubicObject(object):
         '''
         Constructor
         '''
-        self.image = objectZone.view
+        self.image = objectZone
         emptyImage = self.image.copy()
         emptyImage[:] = (0,0,0)
         self.emptyImage = emptyImage
@@ -65,6 +65,7 @@ class QubicObject(object):
             vertexes.extend(wall.vertexes)
         pairs = {}
         stack = list(vertexes)
+        #sprawdz pary wierzcholkow o bliskich sobie (z sasiadujacych scian)
         for v1 in vertexes:
             pairs[v1] = [v1]
             for i,v2 in enumerate(stack):
@@ -75,6 +76,7 @@ class QubicObject(object):
                 if dist < treshold:
                     pairs[v1].append(stack[i])
                     
+        # wyciagnij srednia z blizniaczych punktow
         for k,v in pairs.iteritems():            
             px,py = (0,0)
             count = len(v)
@@ -236,8 +238,8 @@ class QubicObject(object):
                     #node belong to the wall
                     wall.nodes.append(node)
             
-            crossings,fars = wall.getLinesCrossings()
-            vertexes = wall.getVertexes(crossings)
+            crossings,farlines = wall.getLinesCrossings()
+            vertexes = wall.getVertexes(crossings,farlines)
             
             if wall.convex[0] == True and wall.convex_point is not None:
                 print 'podzielny'

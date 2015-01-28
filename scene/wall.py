@@ -10,6 +10,7 @@ import func.analise as an
 from func import objects as obj
 from math import cos
 import func.markElements as mark
+from calculations.labeling import LabelFactory
 
 class Wall(object):
     '''
@@ -203,14 +204,17 @@ class Wall(object):
         
         lines = self.__getLines()
         linesGeneral = []
-    
+        generalDict = {}
+        
         for (rho, theta) in lines:
             # blue for infinite lines (only draw the 5 strongest)
             a,b,c = an.convertLineToGeneralForm((rho,theta),shape)
             linesGeneral.append((a,b,c))
+            generalDict[(a,b,c)] = (rho,theta)
             
         
         crossing = []
+        property = {}
         fars = self.convex
         
         for k in linesGeneral:
@@ -221,22 +225,60 @@ class Wall(object):
                 p = an.get2LinesCrossing(k,l)
                 # sprawdź czy leży wewnątrz strefy
                 if p != False:
+                    if p in crossing:
+                        continue
                     isinside = cv2.pointPolygonTest(boundaries,p,0)
                     if isinside>0:
                         dist = self.wallDistance[p[1],p[0]]
                         if dist<50:
                             if p != False:                                
-                                if p in crossing:
-                                    continue
                                 crossing.append(p)
+                                property[p] = []
+                                property[p].append(k)
+                                property[p].append(l)
                     else:
                         pass
+        #dla wklesłych
+        if self.convex[0]:
+            point = self.__findClosestCrossingConvex(crossing)
             
-    
+            #eliminacja punktow od wkleslosci
+            img = np.zeros_like(self.map)    
+            # linie przeciete mapa sciany
+            for i,line in enumerate(property[point]):
+                l = generalDict[(line[0],line[1],line[2])]
+                
+                mark.drawHoughLines([l], img, 1, 2)
+                img = cv2.subtract(img,self.map)
+            
+            # etykietowanie kawalkow lini    
+            lf = LabelFactory([])
+            res = lf.getLabelsExternal(img, neighbors=8, background=0)
+            labelOK = np.unique(res[(point[1],point[0])])[0]
+            Labels =  np.unique(res)
+            
+            crossMask = np.zeros_like(self.map)  
+            #wszystko co nie jest polaczone z punktem wkleslosci nalezy do maski
+            for label in Labels:
+                if label == -1 or label == labelOK:
+                    continue
+                indexes = np.where(res == label)
+                crossMask[indexes] = 1
+            
+            #usun przeciecia pokrywajace sie z maska
+            for i,v in enumerate(crossing):
+                if crossMask[(v[1],v[0])] == 1:
+                    crossing[i] = None
+#                     crossing.remove(crossing[i])
+            crossing2 = []
+            for c in crossing:
+                if c is not None:
+                    crossing2.append(c)
+            crossing = crossing2
 #         print 'crossings :', crossing
         return crossing, fars#,poly,vertexes
     
-    def getVertexes(self,crossings):
+    def getVertexes(self,crossings,farlines=(False,0,0)):
         '''
         zwraca uporzadkowana liste wierzcholkow
         
@@ -250,14 +292,7 @@ class Wall(object):
             #dla wklesłych
             if self.convex[0]:
                 (start, end) = self.convex[2][0]
-                point = self.convex[1][0]
-                #znajdź przeciecie najblizsze temu punktowi
-                min0 = 1000
-                for cross in crossings:
-                    d0 = an.calcLength(point, cross)
-                    if d0<min0:
-                        min0 = d0
-                        cross_defect = cross
+                cross_defect = self.__findClosestCrossingConvex(crossings)
                 min1 = 1000
                 min2 = 1000
                 
@@ -289,34 +324,50 @@ class Wall(object):
                 for p in polygonG2:
                     p = (p[0][0],p[0][1])
                     vertexes.append(p)
+                    
+            
             
             #vertexy sa uporzadkowane wiec mozna wyeliminowac te punkty ktore sa nadal na jednej lini
-            lines = self.lines
-            for line in lines:
-                img = np.zeros_like(self.map)
-                mark.drawHoughLines([line], img, 1, 2)
-                values = []
-                for i,v in enumerate(vertexes):
-                    if v == self.convex_point:
-                        
-                        values.append(0)
-                    else:
-                        values.append(img[v[1],v[0]])
-                
-                if sum(values) > 2:
-                    if values[0] == 1 and values[-1] == 1 and values[2] == 1:
-                        vertexes.remove(vertexes[0])
-                        pass
-                    if values[0] == 1 and values[-1] == 1 and values[-2] == 1:
-                        vertexes.remove(vertexes[-1])
-                        pass
-                    else:
-                        index =  values.index(1)+1
-                        vertexes.remove(vertexes[index])
+#             lines = self.lines
+#             for line in lines:
+#                 img = np.zeros_like(self.map)
+#                 mark.drawHoughLines([line], img, 1, 2)
+#                 values = []
+#                 for i,v in enumerate(vertexes):
+#                     if v == self.convex_point:
+#                         
+#                         values.append(0)
+#                     else:
+#                         values.append(img[v[1],v[0]])
+#                 
+#                 if sum(values) > 2:
+#                     if values[0] == 1 and values[-1] == 1 and values[2] == 1:
+# #                         vertexes.remove(vertexes[0])
+#                         pass
+#                     if values[0] == 1 and values[-1] == 1 and values[-2] == 1:
+# #                         vertexes.remove(vertexes[-1])
+#                         pass
+#                     else:
+#                         index =  values.index(1)+1
+#                         vertexes.remove(vertexes[index])
         self.vertexes = vertexes
 #         print 'vertex',vertexes
         return vertexes
     
+    def __findClosestCrossingConvex(self,crossings):
+        if self.convex[0]:
+            point = self.convex[1][0]
+            #znajdź przeciecie najblizsze temu punktowi
+            min0 = 1000
+            for cross in crossings:
+                d0 = an.calcLength(point, cross)
+                if d0<min0:
+                    min0 = d0
+                    cross_defect = cross
+            return cross_defect
+        else:
+            return False
+        
     def isShadow(self):
         wMap = self.map
         bottom = wMap[-4,:]

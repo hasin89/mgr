@@ -20,6 +20,7 @@ class LocalizationTest(unittest.TestCase):
 
     def setUp(self):
         np.set_printoptions(precision=4)
+        print 'setup'
 
 
     def tearDown(self):

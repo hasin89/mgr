@@ -257,7 +257,9 @@ class ObjectLocalizationTest(unittest.TestCase):
         k = 1
         kernel = np.ones((k,k))
         dilated = cv2.dilate(md.edges_mask,kernel)
-        edge = np.where(dilated>0,255,0)
+        mask = dilated
+            
+        edge = np.where(mask>0,255,0)
         
         f = '../img/results/automated/%d/%d_edge.jpg' % (folder, i)
         print 'savaing to ' + f
@@ -324,8 +326,7 @@ class ObjectLocalizationTest(unittest.TestCase):
         
         f = '../img/results/automated/%d/%d_view.jpg' % (folder, i)
         print 'savaing to ' + f
-        cv2.imwrite(f, scene.view)
-            
+        cv2.imwrite(f, scene.view)       
 
     def test_9_11(self):
         self.findMirror(9, 11)
