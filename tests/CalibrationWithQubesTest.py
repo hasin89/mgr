@@ -20,6 +20,8 @@ from scene import edgeDetector
 from scene.qubic import QubicObject
 import sys,os
 
+from drawings.Draw import getColors
+
 class edgeDetectionTest(unittest.TestCase):
 
     writepath = ''
@@ -131,7 +133,74 @@ class edgeDetectionTest(unittest.TestCase):
             
         error = CF.reprojectPoints(CF.filenames)
         
-        print 'errors',error
+#         print 'errors',error
+#         print 'image points',CF.imagePoints
+        CF.objectPoints
+        
+        fundamental = cv2.findFundamentalMat(CF.imagePoints[0],CF.imagePoints[1],cv2.FM_8POINT)
+        
+        retval, H1,H2 = cv2.stereoRectifyUncalibrated(CF.imagePoints[0],CF.imagePoints[1],fundamental[0],CF.shape)
+        print 'fundamental', fundamental[0]
+        print retval
+        print H1
+        print H2
+        
+        fundamental = fundamental[0]
+        h, w = CF.shape
+#         overlay1 = cv2.warpPerspective(CF.img1, H1, (w, h))
+#         f = self.writepath+ 'calibration/1_recified_%d.jpg' % (self.i)
+#         print 'savaing to ' + f
+#         cv2.imwrite(f, overlay1)
+#         overlay = cv2.warpPerspective(CF.img2, H2, (w, h))
+#         f = self.writepath+ 'calibration/2_recified_%d.jpg' % (self.i)
+#         print 'savaing to ' + f
+#         cv2.imwrite(f, overlay)
+        
+        lines1 = cv2.computeCorrespondEpilines(CF.imagePoints[0],1,fundamental)
+        lines1 = lines1.reshape(-1,3)
+        
+        lines2 = cv2.computeCorrespondEpilines(CF.imagePoints[1],2,fundamental)
+        lines2 = lines2.reshape(-1,3)
+        
+        img2 = CF.img2.copy()
+        colors = getColors(len(lines2))
+        
+        for l,c in zip(lines1,colors):
+            self.draw(img2, l, c)
+            
+        for p,c in zip(CF.imagePoints[1][5:11],colors):
+            p = p[0]
+            cv2.circle(img2,(p[0],p[1]),15,c,-1)
+            
+        
+            
+        f = self.writepath+ 'calibration/%d_epo_2.jpg' % (self.i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, img2)
+        
+        img1 = CF.img1.copy()
+        
+        for l,c in zip(lines2,colors):
+            self.draw(img1, l, c)
+            
+        for p,c in zip(CF.imagePoints[0][5:11],colors):
+            p = p[0]
+            cv2.circle(img1,(p[0],p[1]),15,c,-1)
+            
+        f = self.writepath+ 'calibration/%d_epo_1.jpg' % (self.i)
+        print 'savaing to ' + f
+        cv2.imwrite(f, img1)
+        
+        
+        
+    def draw(self,img,line,color):
+        w = img.shape[1]
+        r = line
+        x0,y0 = map(int, [0, -r[2]/r[1] ])
+        x1,y1 = map(int, [w, -(r[2]+r[0]*w)/r[1] ])
+        img = cv2.line(img, (x0,y0), (x1,y1), color,1)
+        
+        return img
         
     def detect(self,zone,mask,folder, i, letter):
         pic = i
@@ -204,14 +273,35 @@ class edgeDetectionTest(unittest.TestCase):
         scene,zoneA,zoneC,md = self.getZones(folder,i)
         self.prepareCalibration(md)
         
-        ed = edgeDetector.edgeDetector(zoneA.image)
-        mask = ed.getSobel()
-        vA = self.detect(zoneA,mask,folder, i,'A')
-        
-        ed = edgeDetector.edgeDetector(zoneC.image)
-        mask = ed.getSobel()
-        vC = self.detect(zoneC,mask,folder, i,'C')
-        
+        path1 = self.writepath+ 'pickle_vA_%d.p' % (self.i)
+        path2 = self.writepath+ 'pickle_vC_%d.p' % (self.i)
+        if os.path.exists(path1) and os.path.exists(path2):
+            print 'reading points'
+            fname = path1
+            f = open(fname,'rb')
+            vA = pickle.load(f)
+            fname = path2
+            f = open(fname,'rb')
+            vC = pickle.load(f)
+        else:
+            ed = edgeDetector.edgeDetector(zoneA.image)
+            mask = ed.getSobel()
+            vA = self.detect(zoneA,mask,folder, i,'A')
+            
+            ed = edgeDetector.edgeDetector(zoneC.image)
+            mask = ed.getSobel()
+            vC = self.detect(zoneC,mask,folder, i,'C')
+            
+            fname = path1
+            f = open(fname,'wb')
+            pickle.dump(vA, f)
+            f.close()
+            
+            fname = path2
+            f = open(fname,'wb')
+            pickle.dump(vC, f)
+            f.close()
+            
         self.calibrate(2)
     
         
@@ -222,7 +312,7 @@ class edgeDetectionTest(unittest.TestCase):
 #         self.rrun(10,2)
         
     def test_10_3(self):
-        self.rrun(10,3)
+        self.rrun(10,4)
         
 #     def test_10_4(self):
 #         self.rrun(10,4)   
