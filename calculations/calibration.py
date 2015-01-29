@@ -42,13 +42,15 @@ class CalibrationFactory(object):
         self.board_size = (self.board_w,self.board_h)
         
         filenames = self.getFilenames(numBoards, self.readpath)
-        img = cv2.imread(filenames[0])
+        self.img1 = img = cv2.imread(filenames[0])
+        self.img2 = cv2.imread(filenames[1])
+        
         self.shape = (img.shape[1],img.shape[0])
         
         points3D = self.get3Dpoints(self.board_w, self.board_n)
-        pointsMirror3D = self.getMirror3Dpoints(self.board_w, self.board_n,self.board_h)
+#         pointsMirror3D = self.getMirror3Dpoints(self.board_w, self.board_n,self.board_h)
         
-        self.findPoints(filenames, points3D, pointsMirror3D, normalFlag)
+        self.findPoints(filenames, points3D, normalFlag)
         self.ret, self.mtx, self.dist, self.rvecs, self.tvecs = self.calibrate(filenames)
         
         
@@ -104,7 +106,7 @@ class CalibrationFactory(object):
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(self.objectPoints,self.imagePoints,self.shape)
         return ret, mtx, dist, rvecs, tvecs
         
-    def findPoints(self,filenames,points3D,pointsMirror3D,normalFlag = True):
+    def findPoints(self,filenames,points3D,normalFlag = True):
         success = 0
         numBoards = self.numBoards
         board_size = self.board_size
@@ -115,16 +117,19 @@ class CalibrationFactory(object):
         imagePoints= [] 
         
         for idx in range(numBoards):
-            print filenames[idx]
             corners = self.findCorners(filenames[idx],board_size)
 #             corners = corners[:,:,0]
 #             print 'corners',corners
-            imagePoints.append(corners)
-            
             if idx % 2 == 1 or normalFlag == True:
-                objectPoints.append(points3D)
+                imagePoints.append(corners)
             else:
-                objectPoints.append(pointsMirror3D)
+                corners = self.getMirroredCornerPoints(corners)
+                imagePoints.append(corners)
+            
+#             if idx % 2 == 1 or normalFlag == True:
+            objectPoints.append(points3D)
+#             else:
+#                 objectPoints.append(pointsMirror3D)
             success = success +1
             print 'success:', success
                   
@@ -143,6 +148,8 @@ class CalibrationFactory(object):
         points3D = []
         for i in range(board_n):
             points3D.append([i/board_w,i%board_w,0])
+            
+        print points3D
         return points3D    
     
     def getMirror3Dpoints(self,board_w,board_n,board_h):
@@ -151,8 +158,16 @@ class CalibrationFactory(object):
         '''
         points3D = []
         for i in range(board_n):
-            points3D.append([board_h - 1 - i/board_w, i%board_w , 0])
+            points3D.append([board_h - 1 - i/board_w, board_w-i%board_w , 0])
+        print 'mirror',points3D
         return points3D
+    
+    def getMirroredCornerPoints(self,corners):
+        cornersTMP = corners.reshape(self.board_h,self.board_w,-1)
+        #odwroc kolejnosc punktow w wierszu
+        cornersTMP = np.flipud(cornersTMP)
+        corners = cornersTMP.reshape(self.board_n,1,2)
+        return corners
     
     def reprojectPoints(self,filenames):
         imagePointsR = {}
@@ -172,6 +187,7 @@ class CalibrationFactory(object):
         errorY = 0
         numBoards = len(imagePoints)
         board_n = imagePoints[0].shape[0]
+        board_n = 2
         for idx in range(numBoards):    
             for i in range(board_n):
                 errorX += abs(imagePoints[idx][i][0][0] - imagePointsR[idx][i][0][0])
@@ -185,6 +201,7 @@ class CalibrationFactory(object):
         '''
             find corners of each calibration image
         '''
+        print filename
         img = cv2.imread(filename)
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         found,corners = cv2.findChessboardCorners(gray,board_size,flags=cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_FILTER_QUADS)
@@ -202,11 +219,36 @@ class CalibrationFactory(object):
         cv2.imwrite(self.writepath+'corners_'+filename[0:-3]+'.jpg',gray)
 #         cv2.imshow("corners", gray);
 #         cv2.waitKey(0);
+        corners = self.__orderCorners(corners)
+        return corners
+    
+    def __orderCorners(self,corners):
+        '''
+            uporzadkuj punkty od lewego gornego rogu
+            corners: array(x,y)
+        '''
+        cornersTMP = corners.reshape(self.board_h,self.board_w,-1)
+        
+        #sprawdz czy punkty wraz z numerem kolumny rosnie X
+        if cornersTMP[0,0][0] < cornersTMP[0,-1][0]:
+            pass
+        else:
+            #odwroc kolejnosc punktow w wierszu
+            cornersTMP = np.fliplr(cornersTMP)
+
+        #sprawdz czy punkty wraz z numerem wiersza rosnie Y            
+        if cornersTMP[0,0][1] < cornersTMP[-1,0][1]:
+            pass
+        else:
+            #odwroc kolejnosc punktow w wierszu
+            cornersTMP = np.flipud(cornersTMP)
+        corners = cornersTMP.reshape(self.board_n,1,2)
         return corners
         
     def showDifference(self,filenames,imagePoints2,imagePointsR):
         numBoards = len(imagePoints2)
         board_n = imagePoints2[0].shape[0]
+        board_n = 2
         for idx in range(numBoards):
             img = cv2.imread(filenames[idx])
             for i in range(board_n): 
