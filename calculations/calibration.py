@@ -147,7 +147,7 @@ class CalibrationFactory(object):
         '''
         points3D = []
         for i in range(board_n):
-            points3D.append([i/board_w,i%board_w,0])
+            points3D.append([i%board_w,i/board_w,0])
             
         print points3D
         return points3D    
@@ -259,6 +259,7 @@ class CalibrationFactory(object):
 #             cv2.waitKey(0)
 
     def showDistortion(self,filenames,numBoards,mtx,dist):
+        diffs = []
         for idx in range(numBoards):
             #image distortion
             img = cv2.imread(filenames[idx])
@@ -268,5 +269,7 @@ class CalibrationFactory(object):
             diff = cv2.absdiff(gray,img2)
             
             cv2.imwrite(self.writepath + 'distortion'+str(idx)+'.jpg',diff)
+            diffs.append(diff)
+        return diffs
 #             cv2.imshow('n',diff)
 #             cv2.waitKey(0)
