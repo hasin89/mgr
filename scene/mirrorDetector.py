@@ -188,7 +188,7 @@ class mirrorDetector(object):
             
             rho = 1
             theta = np.pi/180
-            threshold= int(self.edges_mask.shape[0]/4)
+            threshold= int(self.edges_mask.shape[0]/5)
             mask = self.edges_mask.copy()
             mask[self.middle[1]:,:] = 0
             

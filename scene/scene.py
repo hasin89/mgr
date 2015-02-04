@@ -15,7 +15,7 @@ class Scene(object):
     u'''
     Reprezentuje cały obraz sceny
     '''
-    
+    gray = None
     
     def __init__(self, image):
         self.view = image
@@ -34,6 +34,7 @@ class Scene(object):
         self.edge_map = None
         
         self.getGrayScaleImage()
+        
         
         
         
