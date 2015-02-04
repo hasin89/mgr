@@ -21,6 +21,7 @@ from scene.qubic import QubicObject
 import sys,os
 
 from drawings.Draw import getColors
+from numpy.linalg.linalg import inv
 
 class edgeDetectionTest(unittest.TestCase):
 
@@ -41,11 +42,23 @@ class edgeDetectionTest(unittest.TestCase):
         
         CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'/calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
         CF.showCamerasPositions()
+#         CF.reprojectPoints(CF.filenames)
+        print 'next'
+        k = 1
+        img = cv2.imread(CF.filenames[k])
+        r = [[0,0,0],[-12,-1,4]]
+        o = np.array( r  ,'float32')
+        im,jakobian = cv2.projectPoints(o,CF.rvecs[k],CF.tvecs[k],CF.mtx,CF.dist)
+        for p in im:
+            cv2.circle(img,(p[0][0],p[0][1]),6,(0,0,255),2)
+        cv2.imwrite(self.writepath+'calibration/difference11.jpg',img)
         
         mtx, dist, rvecs, tvecs = CF.mtx,CF.dist,CF.rvecs,CF.tvecs
         print 'camera matrix'
         print mtx
-        print CF.dist
+        print rvecs
+        print 'k'
+        print 'shape',CF.shape
         
         
         
@@ -57,38 +70,51 @@ class edgeDetectionTest(unittest.TestCase):
         img4 = cv2.undistort(CF.img2,CF.mtx,CF.dist)
         
         p3 = cv2.undistortPoints(np.array(CF.imagePoints[0]),CF.mtx,CF.dist)
-        print p3
         p4 = cv2.undistortPoints(np.array(CF.imagePoints[1]),CF.mtx,CF.dist)
         
         colors = getColors(len(p3))
-        
-        for P1,P2,pa,pb,c in zip(CF.imagePoints[0],CF.imagePoints[1],p3,p4,colors):
-            print pa
-            print P1
-            pa = (P1[0][0]+pa[0][0], P1[0][1]+ pa[0][1])
-            pb = (P2[0]+pb[0][0], P2[1]+ pb[0][1])
-            print pa
-            cv2.circle(img3,(pa[0],pa[1]),15,c,-1)
-            cv2.circle(img4,(pb[0],pb[1]),15,c,-1)
-            
+                    
         f = self.writepath+ 'calibration/%d_undist_1.jpg' % (self.i)
         print 'savaing to ' + f
         cv2.imwrite(f, img3)
         
         f = self.writepath+ 'calibration/%d_undist_2.jpg' % (self.i)
         print 'savaing to ' + f
-        cv2.imwrite(f, img3)
+        cv2.imwrite(f, img4)
 
         print ll        
         op = [np.array([CF.objectPoints[0]],np.float32)]
         
             
-        error = CF.reprojectPoints(CF.filenames)
+#         error = CF.reprojectPoints(CF.filenames)
         
 #         print 'errors',error
 #         print 'image points',CF.imagePoints
         CF.objectPoints
         
+        t1 = CF.tvecs[0]
+        t2 = CF.tvecs[1]
+        R1,jacob = cv2.Rodrigues(CF.rvecs[0])
+        R2,jacob = cv2.Rodrigues(CF.rvecs[1])
+        print 'R1',R1
+        print 'R2',R2
+        
+        R = np.dot(R2,R1.T)
+        T = t2 - np.dot(R.T,t1)
+        
+        P1 = self.calcProjectionMatrix(mtx, R1, t1)
+        P2 = self.calcProjectionMatrix(mtx, R2, t2)
+        
+        print 'P1',P1
+        print 'P2',P2
+        
+        Te = np.array([[0    , -T[2], T[1]],
+                       [T[2] , 0    ,-T[0]],
+                       [-T[1], T[0] ,   0]]
+                      )
+        essential = np.dot(R,Te)
+        fundamental1 = np.dot(np.dot(CF.mtx.T,essential),CF.mtx) 
+#         print fundamental1
         fundamental,mask = cv2.findFundamentalMat(CF.imagePoints[0],CF.imagePoints[1],cv2.FM_LMEDS)
         
         imagePoints1 = CF.imagePoints[0][mask.ravel()==1]
@@ -104,21 +130,36 @@ class edgeDetectionTest(unittest.TestCase):
         
         retval, H1,H2 = cv2.stereoRectifyUncalibrated(imagePoints1,imagePoints2,fundamental,CF.shape)
         print 'fundamental'
-        print fundamental,'\n'
+#         print fundamental,'\n'
+        
+        R1,R2,P11,P22,Q,ROI1,ROI2 = cv2.stereoRectify(CF.mtx,CF.dist,CF.mtx,CF.dist,CF.shape,R,T)
+        
+        print 'R1',R1
+        print 'R2',R2
+        
+        print 'P1',P11
+        print 'P2',P22
 
         print H1
         print H2
         
         h, w = CF.shape
         
+        rrr2 = cv2.triangulatePoints(P1,P2,imagePoints1 , imagePoints2)
+#         print rrr2.T
+        vfunc = np.vectorize(round)
+        points = cv2.convertPointsFromHomogeneous(rrr2.T)
+        points2 = vfunc(points)
+        print 'recovered:', points2
+        
         
         imagePoints2 = np.append(imagePoints2,vC,axis=0).astype(np.float32)
         imagePoints1 = np.append(imagePoints1,vA,axis=0).astype(np.float32)
         
-        lines1 = cv2.computeCorrespondEpilines(imagePoints1,1,fundamental)
+        lines1 = cv2.computeCorrespondEpilines(imagePoints1,1,fundamental1)
         lines1 = lines1.reshape(-1,3)
         
-        lines2 = cv2.computeCorrespondEpilines(imagePoints2,2,fundamental)
+        lines2 = cv2.computeCorrespondEpilines(imagePoints2,2,fundamental1)
         lines2 = lines2.reshape(-1,3)
         
         img2 = CF.img2.copy()
@@ -156,6 +197,20 @@ class edgeDetectionTest(unittest.TestCase):
         print 'savaing to ' + f
         cv2.imwrite(f, overlay)
         
+    def calcProjectionMatrix(self,mtx,R1,Tvec):
+        a = R1[0,:].tolist()
+        a.append(Tvec[0])
+        b = R1[1,:].tolist()
+        b.append(Tvec[1])
+        c = R1[2,:].tolist()
+        c.append(Tvec[2])
+        
+        Me1 = np.matrix([a,b,c])
+        print Tvec 
+        print Me1       
+        P1 = np.dot(mtx,Me1)
+            
+        return P1    
         
         
     def draw(self,img,line,color):
@@ -175,8 +230,16 @@ class edgeDetectionTest(unittest.TestCase):
         self.i = i
         self.writepath = '../img/results/automated/%d/' % folder
         
-        path1 = self.writepath+ 'pickle_vA_%d.p' % (self.i)
-        path2 = self.writepath+ 'pickle_vC_%d.p' % (self.i)
+        numBoards = 2#14
+        board_w = 10
+        board_h = 7
+        flag = False
+        
+        CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'/calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
+        diffs = CF.showDistortion(CF.filenames, numBoards, CF.mtx, CF.dist)
+        
+        path1 = self.writepath+ 'pickle_%d_vA.p' % (self.i)
+        path2 = self.writepath+ 'pickle_%d_vC.p' % (self.i)
         if os.path.exists(path1) and os.path.exists(path2):
             print 'reading points'
             fname = path1
@@ -188,8 +251,8 @@ class edgeDetectionTest(unittest.TestCase):
         else:
             raise Exception('pickles not found')
         
-        path1 = self.writepath+ 'pickle_zone_A_%d.p' % (self.i)
-        path2 = self.writepath+ 'pickle_zone_C_%d.p' % (self.i)
+        path1 = self.writepath+ 'pickle_%d_zone_A.p' % (self.i)
+        path2 = self.writepath+ 'pickle_%d_zone_C.p' % (self.i)
         if os.path.exists(path1) and os.path.exists(path2):
             print 'reading'
             fname = path1
@@ -221,7 +284,7 @@ class edgeDetectionTest(unittest.TestCase):
 #         self.rrun(10,2)
         
     def test_10_3(self):
-        self.rrun(10,4)
+        self.rrun(10,3)
         
 #     def test_10_4(self):
 #         self.rrun(10,4)   
