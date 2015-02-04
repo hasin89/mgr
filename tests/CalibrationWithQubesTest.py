@@ -34,10 +34,10 @@ class edgeDetectionTest(unittest.TestCase):
         pass
     
     def getZones(self,folder,pic):
-        path1 = self.writepath+ 'pickle_zone_A_%d.p' % (self.i)
-        path2 = self.writepath+ 'pickle_zone_C_%d.p' % (self.i)
-        path3 = self.writepath+ 'pickle_scene_%d.p' % (self.i)
-        path4 = self.writepath+ 'pickle_md_%d.p' % (self.i)
+        path1 = self.writepath+ 'pickle_%d_zone_A.p' % (self.i)
+        path2 = self.writepath+ 'pickle_%d_zone_C.p' % (self.i)
+        path3 = self.writepath+ 'pickle_%d_scene.p' % (self.i)
+        path4 = self.writepath+ 'pickle_%d_md.p' % (self.i)
         if os.path.exists(path1) and os.path.exists(path2) and os.path.exists(path3) and os.path.exists(path4):
             print 'reading'
             fname = path1
@@ -64,7 +64,13 @@ class edgeDetectionTest(unittest.TestCase):
             filename = '../img/%d/%d.JPG' % (folder, pic)
             scene = self.loadImage(filename, factor)
             
-            md = mirrorDetector(scene)
+            md = mirrorDetector(scene)            
+            
+            img = np.where(md.edges_mask == 1,255,0)
+            f = self.writepath+ '%d_edges.jpg' % (self.i)
+            print 'savaing to ' + f
+            cv2.imwrite(f, img)
+            
             mz = md.findMirrorZone()
             
             f = self.writepath+ '%d_mirror_zone.jpg' % (self.i)
@@ -75,7 +81,7 @@ class edgeDetectionTest(unittest.TestCase):
             print 'savaing to ' + f
             cv2.imwrite(f, md.scene.view)
             
-            od = objectDetector2(md,scene.view)
+            od = objectDetector2(md,md.origin)
             zoneA,zoneC = od.detect(chessboard=True)
             
             f = self.writepath+ '%d_A_zone.jpg' % (self.i)
@@ -129,7 +135,10 @@ class edgeDetectionTest(unittest.TestCase):
         CF.showCamerasPositions()
         
         mtx, dist, rvecs, tvecs = CF.mtx,CF.dist,CF.rvecs,CF.tvecs
+        print 'cam'
         print mtx
+        print rvecs
+        print tvecs
             
         error = CF.reprojectPoints(CF.filenames)
         
@@ -312,7 +321,7 @@ class edgeDetectionTest(unittest.TestCase):
 #         self.rrun(10,2)
         
     def test_10_3(self):
-        self.rrun(10,4)
+        self.rrun(10,3)
         
 #     def test_10_4(self):
 #         self.rrun(10,4)   
