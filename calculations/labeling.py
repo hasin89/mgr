@@ -245,6 +245,7 @@ class LabelFactory(object):
     def getLabelsExternal(self,mask,neighbors=8,background=0):
         '''
             dokonuje etykietyzacji za pomoca zewnetrzej biblioteki
+            -1 - tlo
         '''
         LabelsMap = measure.label(mask,neighbors,background)
         LabelsMap = np.asarray(LabelsMap)
