@@ -193,7 +193,7 @@ class edgeDetectionTest(unittest.TestCase):
             if v>max:
                 max = v
                 maxI = k
-        chessboardMap = np.where(objectsLabelsMap==2,1,0)
+        chessboardMap = np.where(objectsLabelsMap==maxI,1,0)
         
         # wyodrebnienie zony
         chess = np.nonzero(chessboardMap)
