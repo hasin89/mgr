@@ -295,7 +295,7 @@ class edgeDetectionTest(unittest.TestCase):
         labelMap = measure.label(b3,8,0)
         properties = measure.regionprops(labelMap)
         
-        areas = [prop['area'] for prop in properties]
+        areas = [prop['convex_area'] for prop in properties]
         
         board_w = 10
         board_h = 7
@@ -315,9 +315,12 @@ class edgeDetectionTest(unittest.TestCase):
         
         areas.sort()
         areas.reverse()
+        avg = sum(areas) / len(areas)
+        print 'average', avg
         if diff>0:
             for d in range(diff):
-                areas[d] = 0
+                if areas[d]>avg:
+                    areas[d] = 0
         areas.sort()
         areas.reverse()
         obsoleteFields = []
@@ -326,7 +329,7 @@ class edgeDetectionTest(unittest.TestCase):
         
         edgeBinaryMap = np.zeros(labelMap.shape)
         for p in properties:
-            area = p['area']
+            area = p['convex_area']
             if area in obsoleteFields:
                 b2[labelMap==p['label']]=(255,0,255)
                 edgeBinaryMap[labelMap==p['label']]=1
