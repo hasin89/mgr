@@ -82,7 +82,7 @@ class edgeDetectionTest(unittest.TestCase):
             cv2.imwrite(f, md.scene.view)
             
             od = objectDetector2(md,md.origin)
-            zoneA,zoneC = od.detect(chessboard=True,multi=True)
+            zoneA,zoneC = od.detect(chessboard=True)
             
             f = self.writepath+ '%d_A_zone.jpg' % (self.i)
             print 'savaing to ' + f
@@ -127,8 +127,8 @@ class edgeDetectionTest(unittest.TestCase):
        
     def calibrate(self,numBoards):
         numBoards = 2#14
-        board_w = 20
-        board_h = 14
+        board_w = 10
+        board_h = 7
         flag = False
         
         CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'/calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
@@ -269,7 +269,7 @@ class edgeDetectionTest(unittest.TestCase):
         img[2] =  Zone(image,0,y,image.shape[1],image.shape[0]-y)
         
         for i in range(1,3):
-            f = self.writepath+'calibration/src/%d/%d.jpg' % (self.i,i)
+            f = self.writepath+'/calibration/src/%d/%d.jpg' % (self.i,i)
             print 'savaing to ' + f
             cv2.imwrite(f, img[i].preview)
         

@@ -48,9 +48,20 @@ class CalibrationFactory(object):
         self.shape = (img.shape[1],img.shape[0])
         
         points3D = self.get3Dpoints(self.board_w, self.board_n)
+        print points3D
 #         pointsMirror3D = self.getMirror3Dpoints(self.board_w, self.board_n,self.board_h)
         
         self.findPoints(filenames, points3D, normalFlag)
+        
+        img = self.img1.copy()
+        idx = 0
+        for p1 in self.imagePoints[idx]:
+            print p1
+            cv2.circle(img,(p1[0],p1[1]),5,(0,255,0),-1)
+        
+        cv2.imwrite(self.writepath+'points'+str(idx)+'.jpg',img)
+        
+        
         self.ret, self.mtx, self.dist, self.rvecs, self.tvecs = self.calibrate(filenames)
         
         
@@ -103,6 +114,11 @@ class CalibrationFactory(object):
         cv2.imwrite(self.writepath+ 'cameras.jpg',dispImg)
         
     def calibrate(self,filenames):
+        mtx = np.array(
+                       [[  4.4e+03,   0.0e+00,   2.2e+03],
+                        [  0.0e+00,   4.6e+03,   1.9e+03],
+                        [  0.0e+00,   0.0e+00,   1.0e+00]]
+                       )
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(self.objectPoints,self.imagePoints,self.shape)
         return ret, mtx, dist, rvecs, tvecs
         
@@ -140,6 +156,7 @@ class CalibrationFactory(object):
         
         self.imagePoints = imagePoints2
         self.objectPoints = objectPoints2 
+
     
     def get3Dpoints(self,board_w,board_n):
         '''
@@ -149,7 +166,6 @@ class CalibrationFactory(object):
         for i in range(board_n):
             points3D.append([i%board_w,i/board_w,0])
             
-        print points3D
         return points3D    
     
     def getMirror3Dpoints(self,board_w,board_n,board_h):
@@ -248,12 +264,15 @@ class CalibrationFactory(object):
     def showDifference(self,filenames,imagePoints2,imagePointsR):
         numBoards = len(imagePoints2)
         board_n = imagePoints2[0].shape[0]
-        board_n = 2
+        print 'xx'
+        print numBoards
+        print board_n
         for idx in range(numBoards):
             img = cv2.imread(filenames[idx])
             for i in range(board_n): 
+                print (imagePointsR[idx][i][0][0],imagePointsR[idx][i][0][1])
                 cv2.circle(img,(imagePoints2[idx][i][0][0],imagePoints2[idx][i][0][1]),5,(0,255,0),-1)
-                cv2.circle(img,(imagePointsR[idx][i][0][0],imagePoints2[idx][i][0][1]),6,(0,0,255),2)
+                cv2.circle(img,(imagePointsR[idx][i][0][0],imagePointsR[idx][i][0][1]),6,(0,0,255),2)
 #             cv2.imshow("repr",img)
             cv2.imwrite(self.writepath+'difference'+str(idx)+'.jpg',img)
 #             cv2.waitKey(0)
