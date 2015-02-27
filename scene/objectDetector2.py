@@ -28,6 +28,35 @@ class objectDetector2(object):
         
         self.origin = image_origin
         
+    def detect2(self,md):
+        
+        
+            
+        img  = md.origin
+        img = cv2.GaussianBlur(img, (5, 5), 0)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        thrs = 180
+#         thrs = self.chesboardTreshold
+        retval, binary = cv2.threshold(gray, thrs, 1, cv2.THRESH_BINARY)
+        k = 10
+        kernel = np.ones((k,k))
+        binary = cv2.dilate(binary,kernel)
+        binary = cv2.erode(binary,kernel)
+                
+        final = np.zeros_like(img)
+        final[binary==1] = (255,255,255)
+        
+        cv2.imwrite('results/test.jpg', final)
+        
+        mid = int(self.mirror_zone.offsetX+self.mirror_zone.width/2)
+        y = md.calculatePointOnLine(mid)[1]
+        mirror_zone = md.mirrorZone
+        zoneA =  Zone(binary,   0 ,0 , mirror_zone.width ,y)
+        zoneC =  Zone(binary,   0 ,y , mirror_zone.width, mirror_zone.height - y)
+        
+        return zoneA, zoneC
+        
+        
     def detect(self,chessboard=False,multi=False):
         '''
         detects objects
