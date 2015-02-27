@@ -199,14 +199,14 @@ class LabelFactory(object):
         contours = {}
         L = self.L
         uni =  np.unique(L)
-        for i in range(0,len(uni)):
-            if uni[i] == 0:
-                continue
-            tempspace = np.where(L == uni[i],1,0)
-            ids = np.nonzero(tempspace)
+        for i in uni:
+            contours[i] = []
+        
+        for index, x in np.ndenumerate(L):    
+            contours[x].append(index)
             
-            li = np.transpose(ids)
-            contours[i] = map(tuple,li)
+        del contours[0]
+            
         return contours
         
 # funkcja liczaca powierzchnie etykiet otrzmnaych z innego framworku

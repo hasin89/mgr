@@ -40,10 +40,10 @@ class ChessboardDetector(object):
     CornerScanResolution = 73
     
     
-    # 3D
+    #3D
     objectPoints = None
     
-    # 2D
+    #2D
     imagePoints = None
     
     origin = None
