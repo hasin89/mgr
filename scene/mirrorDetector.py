@@ -17,17 +17,17 @@ class mirrorDetector(object):
     # blur
     gauss_kernel = 5
     
-    constant = 5
-    blockSize = 101
+    constant = -2
+    blockSize = 11
     tresholdMaxValue = 255
     
     # prog dla grubej kreski
-    distanceTreshold = 4
+    distanceTreshold = 2
     
     # parametry wykrawacza lini
     
     # wielkosc akumulatora
-    rho = 1.5
+    rho = 5
     # theta = 0.025
     # rozdzielczosc kata
     theta = np.pi/180
@@ -35,8 +35,8 @@ class mirrorDetector(object):
     # progowa dlugosc lini
     h_treshold = None
     
-    # odwrotnosc minimalnej czesci długości obrazu np. 2 oznacza 50%, 3 oznacza 33% = 1/3
-    part = 3.5
+    # odwrotnosc minimalnej czesci długości obrazu np. 2 oznacza 50%, 3 oznacza 33% = 1/3, 4 oznacza 25%
+    part = 4
         
     def __init__(self,scene):
         
@@ -65,10 +65,11 @@ class mirrorDetector(object):
         return direct
     
     def calculateLineMiddle(self):
-        x = int(self.scene.width/2)
-        y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
-        
-        return (x,y)
+        if self.mirror_line != None:
+            x = int(self.scene.width/2)
+            y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
+            
+            return (x,y)
     
     def calculatePointOnLine(self,x):
         x = int(x)
@@ -81,7 +82,7 @@ class mirrorDetector(object):
             find edges mask necessary to find the mirror line
         '''
         
-        print 'find edges mask'
+        print 'szukanie krawedzi dla wykrycia krawedzi lustra'
         
         gauss_kernel = self.gauss_kernel
         tresholdMaxValue = self.tresholdMaxValue
@@ -95,11 +96,10 @@ class mirrorDetector(object):
         
         edge_filtred = cv2.adaptiveThreshold(gray_filtred,
                                              maxValue=tresholdMaxValue,
-                                             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                             thresholdType=cv2.THRESH_BINARY_INV,
+                                             adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
+                                             thresholdType=cv2.THRESH_BINARY,
                                              blockSize=blockSize,
                                              C=constant)
-        
         
         
         # CV_DIST -> sasiedztwo 8 spojne
@@ -109,7 +109,8 @@ class mirrorDetector(object):
         mask = np.where(dst>distanceTreshold,1,0).astype('uint8')
         
         mask2 = np.where(dst>distanceTreshold,255,0).astype('uint8')
-        f = '../img/results/matching/__test__.jpg'
+        f = 'results/mirror_edges_map.jpg'
+        print 'zapisywanie do ' + f
         cv2.imwrite(f,mask2)
         
         return mask
@@ -120,7 +121,7 @@ class mirrorDetector(object):
         function responsible for division of the direct and reflected image
         '''
         
-        print 'looking for the mirror line'
+        print 'szukanie lini lustra'
         mask = edges_mask
         
         part = self.part
@@ -162,17 +163,24 @@ class mirrorDetector(object):
     
     
     def findMirrorZone(self):
-        
-        shift = 100
-        
-        left, right = self.__findVerticalEdges(shift)
-        
-        if left == 0 or right == self.scene.width:
-            shift = shift + 5
-            left, right = self.__findVerticalEdges(shift)
-        print 'sides',left,right   
-        theta = 0
-        mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
+        '''
+            zwraca nowy, możliwie mniejszy obszar zainteresowania ROI
+        '''
+
+# dla wzorca nie ma sensu szukanie pionowych krawedzi lustra        
+#         shift = 100
+#         
+#         left, right = self.__findVerticalEdges(shift)
+#         
+#         if left == 0 or right == self.scene.width:
+#             shift = shift + 5
+#             left, right = self.__findVerticalEdges(shift)
+#         print 'sides',left,right
+           
+        left = 0
+        right = self.scene.width
+#         theta = 0
+#         mark.drawHoughLines([(left,theta),(right,theta)], self.scene.view, 255, 5)
         
         mirrorZone = Zone(self.scene.view,left,0,right-left,self.scene.height)
         self.mirrorZone=  mirrorZone
@@ -180,6 +188,11 @@ class mirrorDetector(object):
         return self.mirrorZone
     
     def __findVerticalEdges(self,shift,chess=False):
+        '''
+            funkcja szukająca pionowych karawędzi lustra.
+            Od kiedy wzorzec nie mieści się w tym zakresie nie ma sensu szukac tych krawędzi dla wzorca kalibracyjnego
+            może miec sens dla obiektu
+        '''
         #narysuj kreske na pustym obrazie
         canvas = np.zeros_like(self.edges_mask)
         chess = True
