@@ -104,7 +104,7 @@ def detect(zone, letter):
     cv2.imwrite(f, image)
         
     return qubic.vertexes
-    
+        
 
 def MirrorPoints(points):
     ps = points
@@ -155,14 +155,15 @@ def calibrate():
     mirrored = names1.split("|")
     direct = names2.split("|")
     counter = len(mirrored)
+    print 'counter', counter
     mirrored.extend(direct)
     
     imag = []
     real = []
     
     i = 0
-    cd = ChessboardDetector(chessboardDetectionTreshold, (board_w, board_h), cornersVerificationCircleDiameter[1])
-    for index, filename in enumerate(mirrored[:2]):
+    
+    for index, filename in enumerate(mirrored):
         if index>=counter:
             i = 1
         image_index = index+1
@@ -171,12 +172,16 @@ def calibrate():
         shape = (scene.view.shape[0],scene.view.shape[1])
         
 #             for i in range(0, 2):
+        print '=====' 
         print 'calibrate image', filename
+        print '====='
         
         scene = loadImage(filename)
-        
-        
+
+        cd = ChessboardDetector(chessboardDetectionTreshold, (board_w, board_h), cornersVerificationCircleDiameter[1])
+        cd.image_index = index
         cd.image_type = i
+        cd.filename = filename
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -186,14 +191,12 @@ def calibrate():
             finalP = finalP
         
         imag.append(finalP)
-        real.append(finalWP)                
-        
-        f = writepath + 'chessboard_mask_%d_%d.jpg' % (image_index, i)
-        print 'zapisywanie do ' + f
-        cv2.imwrite(f, image)
+        real.append(finalWP)  
             
     
     flat = True
+    print 'acumulate'
+    
     objectPoints2, imagePoints2 = calibration.acumulateCalibrationPoints(imag,real,(b_w,b_h), flat)
     
     print objectPoints2
@@ -224,10 +227,9 @@ def poseEstimation():
     mirrorZone = md.findMirrorZone()
     
     mtx,dist = calibration.loadIntrinsicCalibration()
-     
-    f = writepath + 'mirror_zone.jpg'
-    print 'zapisywanie do ' + f
-    cv2.imwrite(f, mirrorZone.preview)
+    print mtx
+    print dist
+    
     index = 0
     filenames = calibration.prepareCalibration(md, index)
     
@@ -239,6 +241,7 @@ def poseEstimation():
         
         cd = ChessboardDetector(chessboardDetectionTreshold, (b_w, b_h), cornersVerificationCircleDiameter[i])
         cd.image_type = i
+        cd.filename = 'pose.jpg'
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -252,8 +255,11 @@ def poseEstimation():
 
     flat = False
     objectPoints2, imagePoints2 = calibration.acumulateCalibrationPoints(imag,real,(b_w,b_h), flat)
-    
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2, imagePoints2, shape, mtx, dist, flags=cv2.CALIB_USE_INTRINSIC_GUESS )
+    print objectPoints2
+    print imagePoints2
+    print objectPoints2, imagePoints2, shape[:2], mtx, dist, cv2.CALIB_USE_INTRINSIC_GUESS
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2, imagePoints2, shape[:2], mtx, dist, flags=cv2.CALIB_USE_INTRINSIC_GUESS )
+    print rvecs, tvecs
     calibration.saveExtrinsicCalibration(rvecs, tvecs)
        
         

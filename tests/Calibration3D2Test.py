@@ -55,7 +55,7 @@ class edgeDetectionTest(unittest.TestCase):
         
         gray = cv2.imread(f,flags=cv2.CV_LOAD_IMAGE_GRAYSCALE)
 
-        finalPoints,finalWorldPoints = cd.getCalibrationPoints(corners2Shifted, gray)
+        finalPoints,finalWorldPoints = cd.getPoints(corners2Shifted, gray)
         
         print finalPoints.tolist()
         print finalWorldPoints.tolist()

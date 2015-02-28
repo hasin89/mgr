@@ -38,7 +38,7 @@ class edgeDetectionTest(unittest.TestCase):
         path2 = self.writepath+ 'pickle_%d_zone_C.p' % (self.i)
         path3 = self.writepath+ 'pickle_%d_scene.p' % (self.i)
         path4 = self.writepath+ 'pickle_%d_md.p' % (self.i)
-        if os.path.exists(path1) and os.path.exists(path2) and os.path.exists(path3) and os.path.exists(path4):
+        if os.path.exists(path1) and os.path.exists(path2) and os.path.exists(path3) and os.path.exists(path4) and False:
             print 'reading'
             fname = path1
             f = open(fname,'rb')
@@ -131,7 +131,7 @@ class edgeDetectionTest(unittest.TestCase):
         board_h = 7
         flag = False
         
-        CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'/calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
+        CF = CalibrationFactory(numBoards,board_w,board_h,flag,self.writepath+'calibration/src/'+str(self.i)+'/',self.writepath+'calibration/' )
         CF.showCamerasPositions()
         
         mtx, dist, rvecs, tvecs = CF.mtx,CF.dist,CF.rvecs,CF.tvecs
@@ -269,7 +269,7 @@ class edgeDetectionTest(unittest.TestCase):
         img[2] =  Zone(image,0,y,image.shape[1],image.shape[0]-y)
         
         for i in range(1,3):
-            f = self.writepath+'/calibration/src/%d/%d.jpg' % (self.i,i)
+            f = self.writepath+'calibration/src/%d/%d.jpg' % (self.i,i)
             print 'savaing to ' + f
             cv2.imwrite(f, img[i].preview)
         
@@ -284,7 +284,7 @@ class edgeDetectionTest(unittest.TestCase):
         
         path1 = self.writepath+ 'pickle_vA_%d.p' % (self.i)
         path2 = self.writepath+ 'pickle_vC_%d.p' % (self.i)
-        if os.path.exists(path1) and os.path.exists(path2):
+        if os.path.exists(path1) and os.path.exists(path2) and False:
             print 'reading points'
             fname = path1
             f = open(fname,'rb')
