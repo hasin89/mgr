@@ -22,6 +22,8 @@ def getCalibrationPointsForScene(scene, chessboard_detector,chessboardFieldSize=
     corners, z = chessboard_detector.find_potential_corners(scene)
 
     offset = (z.offsetX, z.offsetY)
+    print 'offset', offset
+    print 'corners', corners
     corners2Shifted = chessboard_detector.getZoneCorners(corners, offset)
     
     f = 'tmp_chessboard.jpg'
@@ -59,9 +61,11 @@ def acumulateCalibrationPoints(images,objects,(board_w,board_h), flat):
     objectPoints = []
     imagePoints = []
     for im, re in zip(images, objects):
-        
-        objectPoints.append(np.array(im).reshape((n2, 3))[:limit])
-        imagePoints.append(re.reshape((n2, 2))[:limit])
+        print 'n2', n2
+        print im.shape
+        print re.shape
+        objectPoints.append(np.array(re).reshape((n2, 3))[:limit])
+        imagePoints.append(im.reshape((n2, 2))[:limit])
         
     objectPoints2 = np.array(objectPoints, 'float32')
     imagePoints2 = np.array(imagePoints, 'float32')
@@ -83,8 +87,8 @@ def saveIntrinsicCalibration(mtx, dist):
     
 def saveExtrinsicCalibration(rvecs, tvecs):
 
-    rveclist = rvecs.tolist()
-    tveclist = tvecs.tolist()
+    rveclist = rvecs[0].tolist()
+    tveclist = tvecs[0].tolist()
     parameters = {
                    'rotation' : rveclist,
                    'translation' : tveclist,
@@ -116,7 +120,7 @@ def loadExtrinsicCalibration():
     return map(np.array, [jobject['rotation'],jobject['translation']])
 
 
-def prepareCalibration(calibration_folder, md, index):
+def prepareCalibration(md, index):
     '''
     utworzenie odzielnych obrazów do calów kalibracji na podstawie dwóch szachownic na jednym obrazie
     '''
