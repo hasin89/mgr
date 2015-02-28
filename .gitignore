@@ -11,3 +11,5 @@ img/*
 *.txt
 *.NEF
 *.zip
+results/*
+src/results/2014/*

@@ -42,6 +42,7 @@ class CalibrationFactory(object):
         self.board_size = (self.board_w,self.board_h)
         
         filenames = self.getFilenames(numBoards, self.readpath)
+        print filenames
         self.img1 = img = cv2.imread(filenames[0])
         self.img2 = cv2.imread(filenames[1])
         
@@ -73,7 +74,7 @@ class CalibrationFactory(object):
         
         for idx in range(numBoards):
             nr = idx + 1
-            filenames[idx] =  basePath + str(nr) + ".jpg"
+            filenames[idx] =  basePath + str(idx) +'_' + str(nr) + ".jpg"
         self.filenames = filenames
         return filenames    
         
