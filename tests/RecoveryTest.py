@@ -213,6 +213,9 @@ class edgeDetectionTest(unittest.TestCase):
         imagePoints = [np.array(left).reshape((140,2))[:140],np.array(right).reshape((140,2))[:140]]
         imagePoints2 = np.array(imagePoints,'float32')
         
+        print objectPoints2
+        print imagePoints2
+        
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
         
         img1 = scene1.view.copy()
@@ -261,10 +264,10 @@ class edgeDetectionTest(unittest.TestCase):
         print 'triangulation error', self.calcTriangulationError(left_real,points)
         
         points2 = vfunc(points,4)
-        print 'recovered:\n', points2.reshape(144,3)
+        print 'recovered:\n', points2.reshape(144,3)[-4:]
         points2 = vfunc(points)
         mm = np.multiply(points,0.050)
-        print 'real:\n', left_real.reshape(140,3)
+#         print 'real:\n', left_real.reshape(140,3)
         
         oPoints3 = np.array([(478,1313),(432,1174)],dtype='float32')
         oPoints4 = np.array([(1883,1805),(1877,1637)],dtype='float32')
@@ -332,6 +335,7 @@ class edgeDetectionTest(unittest.TestCase):
 #         img2 = cv2.remap(img2,map1,map2,cv2.INTER_LINEAR)
         
 #         cv2.imshow("repr",img1)
+        print self.writepath+'difference_test_'+str(3)+'.jpg'
         cv2.imwrite(self.writepath+'difference_test_'+str(3)+'.jpg',img1)
         cv2.imwrite(self.writepath+'difference_test_'+str(4)+'.jpg',img2)
         cv2.waitKey(0)
