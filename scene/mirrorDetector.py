@@ -37,6 +37,8 @@ class mirrorDetector(object):
     
     # odwrotnosc minimalnej czesci długości obrazu np. 2 oznacza 50%, 3 oznacza 33% = 1/3, 4 oznacza 25%
     part = 4
+    
+    DST = None
         
     def __init__(self,scene):
         
@@ -50,6 +52,8 @@ class mirrorDetector(object):
         
         self.middle = self.calculateLineMiddle()
         self.mirrorZone = None
+        
+        
         
     
     def getReflectedZone(self,mirror_line):
@@ -136,18 +140,31 @@ class mirrorDetector(object):
         lines2 = cv2.HoughLines(mask,rho,theta,threshold)
         
         # znajdź linie o najmniejszym parametrze A (najbliższym poziomego) A=0 idealnie pozioma linia. max odchylenie 22.5
-        Amin = 2
+        Amin = 20000
         mirror_line = None
         mirror_line_Hough = None
         
+        if lines2 == None:
+            print 'nieznaleziono linie lustra!'
+            return None
+        
         for (rho,theta) in lines2[0][:7]:
-            
+            print rho
             line = convertLineToGeneralForm((rho,theta),mask.shape)
-            A = abs((round(line[0],0)))
+            if self.DST != None:
+                self.DST = 1200
+                A = (rho-self.DST)**2
+            else:
+                A = abs((round(line[0],0)))
             if A<Amin:
                 mirror_line = line
                 mirror_line_Hough = (rho,theta) 
                 Amin=A 
+#             A = abs((round(line[0],0)))
+#             if A<Amin:
+#                 mirror_line = line
+#                 mirror_line_Hough = (rho,theta) 
+#                 Amin=A 
         
         if mirror_line == None:
             print 'detected lines:'
@@ -158,7 +175,16 @@ class mirrorDetector(object):
                 self.scene.view[mask == 1] = (255,0,0)
                                     
             raise Exception("Mirror line not found!")
+        
         self.mirror_line_Hough = mirror_line_Hough
+        print 'znaleziona linia lustra:', mirror_line_Hough
+        img = self.scene.view.copy()
+        mark.drawHoughLines(lines2[0], img, (128,0,128), 5)
+        mark.drawHoughLines([mirror_line_Hough], img, (0,255,0), 5)
+        f = 'results/mirror_line.jpg'
+        print 'zapisywanie do ' + f
+        cv2.imwrite(f,img)
+        
         return mirror_line
     
     
