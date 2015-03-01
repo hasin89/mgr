@@ -144,9 +144,7 @@ class thirdDianensionREcovery():
     def makeWow(self,img1, mtx, dist, rvecs, tvecs,origin):
         axis = np.float32([[40,0,0], [0,40,0], [0,0,40],[-500,0,0],[-240,40,40],[-200,40,40],[-240,0,40],[-200,0,40]]).reshape(-1,3)
         imgpoints,jacobian = cv2.projectPoints(axis, rvecs,tvecs, mtx, dist) 
-        print 'wow'
-        print imgpoints
-        print origin
+        print 'axis generation'
         img1 = self.drawAxes(img1, origin, imgpoints)
         
     
@@ -244,10 +242,6 @@ class thirdDianensionREcovery():
         imagePoints2 = np.array(imagePoints,'float32')
         
         ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
-        print mtx_init
-        print dist_init
-        print rvecs[0]
-        print tvecs[0]
         
         objectPoints = [np.array(left_real).reshape((140,3)) , np.array(right_real).reshape((140,3))]
         objectPoints2 = np.array(objectPoints,'float32')
@@ -255,8 +249,8 @@ class thirdDianensionREcovery():
         imagePoints = [np.array(left).reshape((140,2))[:140],np.array(right).reshape((140,2))[:140]]
         imagePoints2 = np.array(imagePoints,'float32')
         
-        print objectPoints2
-        print imagePoints2
+#         print objectPoints2
+#         print imagePoints2
         
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
         
