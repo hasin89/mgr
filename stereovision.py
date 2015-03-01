@@ -7,7 +7,7 @@ Created on Feb 26, 2015
 '''
 import sys, os
 import cv2
-import json
+import time
  
 import numpy as np
 import func.markElements as mark
@@ -18,6 +18,8 @@ from scene.qubic import QubicObject
 from scene.mirrorDetector import mirrorDetector
 from scene.objectDetector2 import objectDetector2
 from scene.edgeDetector import edgeDetector
+
+from geoobjects import Recovery
 
 import calculations.calibration3 as calibration
 from calculations.chessboard import ChessboardDetector
@@ -30,7 +32,7 @@ calibration.writepath = writepath
 
 # adjustable parameters for different types of scene
 
-chessboardDetectionTreshold = 150  # -> empirical for the background of the chesssboard
+chessboardDetectionTreshold = [150,150]  # -> empirical for the background of the chesssboard
 cornersVerificationCircleDiameter = [10, 26]  # -> usually less than 25% of chessboard field pixel size o: mirrored, direct
 board_w = 10
 board_h = 7
@@ -107,11 +109,15 @@ def detect(zone, letter):
         
 
 def MirrorPoints(points):
+    print len(points)
+    print len(points[0])
     ps = points
-    mirror = np.zeros(ps.shape)
-    for x in range(ps.shape[0]):
-        for y in range(ps.shape[1]):
-            mirror[x][ps.shape[1] - y - 1] = ps[x][y]
+    shape = (14,10)
+    
+    mirror = np.zeros((shape[0],shape[1],2))
+    for x in range(shape[0]):
+        for y in range(shape[1]):
+            mirror[x][shape[1] - y - 1] = ps[x][y]
     return mirror      
 
 
@@ -128,6 +134,31 @@ def showDifference(filenames,imagePoints2,imagePointsR):
         cv2.imwrite(writepath+'difference'+str(idx)+'.jpg',img)  
 
 
+def swap(A):
+    A = np.array(A)
+    
+    
+    A = A.T
+    B = np.array([ A[1],A[0] ])
+    B = B.T
+    
+    return B
+
+def rearange(A):
+    
+    D = A.shape[2]
+    rows = 14
+    cols = 10
+    A.reshape((rows,cols,D))
+    C = np.zeros_like(A)
+    
+    for row in range(rows):
+        C[row] = A [ ((row/7)*7 + 6-(row%7)) ]
+    
+    B = C.tolist()
+    
+    return B
+    
 def calcError(imagePoints,imagePointsR):
     '''
         calculates average? error between the real and reprojected points 
@@ -145,15 +176,66 @@ def calcError(imagePoints,imagePointsR):
     errorY /= numBoards * board_n
     
     return (errorX,errorY)
+
    
+def drawAxes(img, imgpts):
+#     corner = tuple(origin.ravel())
+    o2 = (int (imgpts[3][0][1]) ,int (imgpts[3][0][0]))
+    corner = o2
+    
+    cv2.line(img, (corner[1],corner[0]), (int (imgpts[0][0][1]) ,int (imgpts[0][0][0])), (255,0,0), 5)
+    cv2.line(img, (corner[1],corner[0]), (int (imgpts[1][0][1]) ,int (imgpts[1][0][0])), (0,255,0), 5)
+    cv2.line(img, (corner[1],corner[0]), (int (imgpts[2][0][1]) ,int (imgpts[2][0][0])), (0,0,255), 5)
+    
+    cv2.circle(img,o2,5,(255,255,255),-1)
+#         cv2.line(img, (corner[1],corner[0]), (int (imgpts[3][0][1]) ,int (imgpts[3][0][0])), (255,255,255), 5)
+#         
+#         cv2.circle(img,(int (imgpts[4][0][1]) ,int (imgpts[4][0][0])),2,(255,0,255),-1)
+#         cv2.circle(img,(int (imgpts[5][0][1]) ,int (imgpts[5][0][0])),2,(255,0,255),-1)
+#         cv2.circle(img,(int (imgpts[6][0][1]) ,int (imgpts[6][0][0])),2,(255,0,255),-1)
+#         cv2.circle(img,(int (imgpts[7][0][1]) ,int (imgpts[7][0][0])),2,(255,0,255),-1)
+    return img
+
+def drawBundarites(img,points):
+    for corner in points:
+        corner = tuple(corner.ravel())
+        corner = map(int,corner)
+        print (corner[1],corner[0])
+        cv2.circle(img, (corner[1],corner[0]), 55 , (255,0,255),  -1)
+    return img
+    
+    
+def makeWow(img1, mtx, dist, rvecs, tvecs):
+    axis = np.float32([[40,0,0], [0,40,0], [0,0,40],[0,0,0]]).reshape(-1,3)
+    imgpoints,jacobian = cv2.projectPoints(axis, rvecs,tvecs, mtx, dist)
+    img1 = drawAxes(img1, imgpoints)
+    
+    originpoints,jacobian = cv2.projectPoints(np.float32([[0,0,0]]).reshape(-1,3), rvecs,tvecs, mtx, dist) 
+    print 'wow'
+    
+    points = np.float32([[120,180,0], [0,0,0], [140,0,140],[140,180,20]]).reshape(-1,3)
+    
+    points,jacobian = cv2.projectPoints(points, rvecs,tvecs, mtx, dist) 
+    
+    img1 = drawBundarites(img1, points)
+    
+    
+
    
 def calibrate():
     # nastepuje kalibracja kamery obrazami szachownicy
     names1 = sys.argv[2]
     names2 = sys.argv[3]
-    
-    mirrored = names1.split("|")
-    direct = names2.split("|")
+    if names1 == 'None':
+        mirrored = []
+    else:
+        mirrored = names1.split("|")
+        
+    if names2 == 'None':
+        direct = []
+    else:
+        direct = names2.split("|")
+        
     counter = len(mirrored)
     print 'counter', counter
     mirrored.extend(direct)
@@ -161,56 +243,67 @@ def calibrate():
     imag = []
     real = []
     
-    i = 0
+    outputImages = []
+    filenames = []
+    offsets = []
     
+    i = 0
     for index, filename in enumerate(mirrored):
         if index>=counter:
+            print 'zmiana'
             i = 1
-        image_index = index+1
             
-        scene = loadImage(filename)
-        shape = (scene.view.shape[0],scene.view.shape[1])
-        
-#             for i in range(0, 2):
         print '=====' 
         print 'calibrate image', filename
         print '====='
         
         scene = loadImage(filename)
+        
+        shape = (scene.view.shape[0],scene.view.shape[1])
+        outputImages.append(scene.view)
+        filenames.append(filename)
 
-        cd = ChessboardDetector(chessboardDetectionTreshold, (board_w, board_h), cornersVerificationCircleDiameter[1])
+        cd = ChessboardDetector(chessboardDetectionTreshold[i], (board_w, board_h), cornersVerificationCircleDiameter[i])
         cd.image_index = index
         cd.image_type = i
         cd.filename = filename
         
+        cd.thresholdGetFields = 140
+        
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
         if i == 0:
-            finalP = MirrorPoints(finalP)
+            finalP = np.array(MirrorPoints(finalP))
         else:
-            finalP = finalP
+            finalP = np.array(finalP)
+            
+        calibration.saveParameter(finalP, 'ip_%s' % filename.split('/')[-1])
+        calibration.saveParameter(finalWP, 'rp_%s' % filename.split('/')[-1])
         
         imag.append(finalP)
         real.append(finalWP)  
-            
+        offsets.append(offset)
     
-    flat = True
-    print 'acumulate'
-    
-    objectPoints2, imagePoints2 = calibration.acumulateCalibrationPoints(imag,real,(b_w,b_h), flat)
-    
-    print objectPoints2
-    print imagePoints2
-    print shape
-    
-    ret, mtx_tmp, dist_tmp, rvecs, tvecs = cv2.calibrateCamera(objectPoints2, imagePoints2, shape)
-    print mtx_tmp
-    print dist_tmp
+    chessPoints = []
+    for im in imag:
+        p = rearange(im)
+        chessPoints.append(p)
 
-    flat = False
-    objectPoints2, imagePoints2 = calibration.acumulateCalibrationPoints(imag,real,(b_w,b_h), flat)
+    real = rearange(real[0])
     
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2, imagePoints2, shape, mtx_tmp, dist_tmp, flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+    trueOffsets = []
+    for off in offsets:
+        offset = off[1],off[0]
+        trueOffsets.append( offset )
+
+    calibrationTool = Recovery.thirdDianensionREcovery()
+    imagePoints2, mtx, dist, rvecs, tvecs, left_real, images = calibrationTool.calibrateMulti(filenames, shape, chessPoints, real, trueOffsets)
+    
+    for rvec,tvec,imgPoints, img1,filename in zip(rvecs,tvecs,imagePoints2,outputImages,filenames):
+        f = 'results/calibration/calibrated_image_%s' % filename
+        print 'results/calibration/calibrated_image_%s' % filename
+        cv2.imwrite(f, img1)
+        
     print mtx
     print dist
     print 'R', rvecs[-1]
@@ -222,7 +315,8 @@ def calibrate():
 def poseEstimation():
     filename = sys.argv[2]
     scene = loadImage(filename)
-    shape = scene.view.shape
+    shape = scene.view.shape[:2]
+    
     md = mirrorDetector(scene)
     mirrorZone = md.findMirrorZone()
     
@@ -232,35 +326,100 @@ def poseEstimation():
     
     index = 0
     filenames = calibration.prepareCalibration(md, index)
+    print filenames
     
-    imag = []
-    real = []
+    imag = {}
+    real = {}
+    
+    board_w = 10
+    board_h = 7
+    
+    views = []
+    offsets = []
     
     for i,filename in enumerate(filenames):
         scene = loadImage(filename)
+        parts = filename.split('/')
         
-        cd = ChessboardDetector(chessboardDetectionTreshold, (b_w, b_h), cornersVerificationCircleDiameter[i])
+        cd = ChessboardDetector(chessboardDetectionTreshold[i], (board_w, board_h), cornersVerificationCircleDiameter[i])
+        cd.image_index = index
         cd.image_type = i
-        cd.filename = 'pose.jpg'
+        cd.filename = parts[-1]
+        cd.thresholdGetFields = 140
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
-        if i == 0:
-            finalP = MirrorPoints(finalP)
-        else:
-            finalP = finalP
+        offsets.append(offset)
         
-        imag.append(finalP)
-        real.append(finalWP)   
+        if i == 0:
+            finalP = np.array(MirrorPoints(finalP))
+            pass
+        else:
+            finalP = np.array(finalP)
+            
+        views.append(cd.origin.copy())
+        
+        imag[i] = finalP
+        real[i] = finalWP  
+        print i
+        
+    
+#     scan = np.zeros((shape[0],shape[1],3))    
+#     for f in filenames:
+#         scene = loadImage(filename)
+#         scan = scene.view.copy()
+#         c1 = imag[0]
+#         print c1
+#         for r in c1:
+#             for c in r:
+#                 ppp = (c[1],c[0])
+#                 ppp = map(int,ppp)
+#                 ppp = tuple(ppp)
+#                 print ppp
+#                 cv2.circle(scan,ppp,5,(255,255,255),-1)
+#         
+#         
+#         window = cv2.namedWindow('a',cv2.WINDOW_NORMAL)
+#         cv2.resizeWindow('a',shape[0]/4,shape[1]/4)
+#         cv2.imshow('a',scan)
+#     #     time.sleep(10)
+#         cv2.waitKey()
+#         cv2.destroyAllWindows()
+    calibrationTool = Recovery.thirdDianensionREcovery()
+    
+    trueOffsets = []
+    for off in offsets:
+        offset = off[1],off[0]
+        trueOffsets.append( offset )
+    
+    up = imag[0]
+    up = rearange(up)
+    
+    down = imag[1]
+    down = rearange(down)
 
-    flat = False
-    objectPoints2, imagePoints2 = calibration.acumulateCalibrationPoints(imag,real,(b_w,b_h), flat)
-    print objectPoints2
-    print imagePoints2
-    print objectPoints2, imagePoints2, shape[:2], mtx, dist, cv2.CALIB_USE_INTRINSIC_GUESS
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2, imagePoints2, shape[:2], mtx, dist, flags=cv2.CALIB_USE_INTRINSIC_GUESS )
-    print rvecs, tvecs
-    calibration.saveExtrinsicCalibration(rvecs, tvecs)
+    real[0] = rearange(real[0])
+    real[1] = rearange(real[1])
+    
+    up_real = real[0]
+    down_real = real[1]
+    
+    offsetUp = (62,   1617)
+    offsetDown = (1424 , 2240)
+    
+#     offsetUp = (0, 0)
+#     offsetDown = (0 , 0)
+    
+    
+    modelPoints = [
+                   [(431,1174),(479,1311),(385,1290),(338,1156)],
+                   [(1877,1635),(1880,1804),(2037,1872),(2038,1701)]
+                   ]
+
+    imagePoints2, mtx, dist, rvecs, tvecs, left_real, images = calibrationTool.calibrateMulti(filenames, shape, [up, down], real[0], trueOffsets)
+    
+    calibrationTool.triangulate(imagePoints2, modelPoints, rvecs, tvecs, mtx, dist, left_real, images)
+    print mtx
        
         
 def localize():
@@ -307,6 +466,7 @@ def localize():
 
 if __name__ == '__main__':
     # sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    start = time.time()
     scriptName = sys.argv[0]
     (b_w, b_h) = (10, 7)
     
@@ -326,5 +486,8 @@ if __name__ == '__main__':
     else:
         massage = "Podaj tryb pracy i nazwy obrazów źródłowych"
         print massage
+    
+    end = time.time()
+    print 'elapsed:', end-start
 
 
