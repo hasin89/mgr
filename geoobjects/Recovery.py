@@ -162,7 +162,11 @@ class thirdDianensionREcovery():
 #         cv2.circle(img,(int (imgpts[7][0][1]) ,int (imgpts[7][0][0])),2,(255,0,255),-1)
         return img
     
-    def calibrateMulti(self,filenames,shape,chessPoints,real,offsets):
+    def matchPoints(self,oPoints1,oPoints2,lines1,lines2):
+        
+        return oPoints1,oPoints2
+    
+    def calibrateMulti(self,filenames,shape,chessPoints,real,offsets,guess=False,mtx0=None,dist0=None):
         '''
         jedna wspolna lista lista punktow kalibracyjnych wystarcza
         chessPoints - lista punktow dla kazdej z szachownic
@@ -188,22 +192,36 @@ class thirdDianensionREcovery():
         for points in points2:
             objectPoints.append( np.array(real).reshape((140,3))[:70] )
             imagePoints.append( points.reshape((140,2))[:70] )
+        
+          
+        objectPoints2 = np.array(objectPoints,'float32')
+        imagePoints2 = np.array(imagePoints,'float32')
+        
+        
+        if guess:
+            objectPoints = []
+            imagePoints = []
+            for points in points2:
+                objectPoints.append( np.array(real).reshape((140,3))[:140] )
+                imagePoints.append( points.reshape((140,2))[:140] )
+            objectPoints2 = np.array(objectPoints,'float32')
+            imagePoints2 = np.array(imagePoints,'float32')
+                
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx0,dist0,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
             
-        objectPoints2 = np.array(objectPoints,'float32')
-        imagePoints2 = np.array(imagePoints,'float32')
+        else:
+            ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
         
-        ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
-        
-        objectPoints = []
-        imagePoints = []
-        for points in points2:
-            objectPoints.append( np.array(real).reshape((140,3))[:140] )
-            imagePoints.append( points.reshape((140,2))[:140] )
-        
-        objectPoints2 = np.array(objectPoints,'float32')
-        imagePoints2 = np.array(imagePoints,'float32')
-        
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+            objectPoints = []
+            imagePoints = []
+            for points in points2:
+                objectPoints.append( np.array(real).reshape((140,3))[:140] )
+                imagePoints.append( points.reshape((140,2))[:140] )
+            
+            objectPoints2 = np.array(objectPoints,'float32')
+            imagePoints2 = np.array(imagePoints,'float32')
+            
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
         
         images = []
         for scene in scenes:
@@ -265,7 +283,7 @@ class thirdDianensionREcovery():
         return imagePoints2, mtx, dist, rvecs, tvecs, left_real, images
         
         
-    def triangulate(self, imagePoints2, modelPoints  , rvecs,tvecs,mtx,dist, real, images):
+    def getFundamental(self, imagePoints2, modelPoints  , rvecs,tvecs,mtx,dist, real, images):
         
         img1 = images[0]
         img2 = images[1]
@@ -279,8 +297,12 @@ class thirdDianensionREcovery():
         imagePoints3 = np.append(imagePoints2[0], oPoints1, 0)
         imagePoints4 = np.append(imagePoints2[1], oPoints2, 0)
         
-        fundamental,mask = cv2.findFundamentalMat(imagePoints2[0],imagePoints2[1],cv2.FM_8POINT)
-        print 'F1',fundamental
+        print 'shape img', imagePoints3.T
+        
+        
+#         metoda Hartleya
+#         fundamental,mask = cv2.findFundamentalMat(imagePoints2[0],imagePoints2[1],cv2.FM_8POINT)
+#         print 'F1',fundamental
         
         R,T = self.calcRT(rvecs, tvecs)
         F = self.calcFundamental(mtx, R, T)
@@ -300,11 +322,9 @@ class thirdDianensionREcovery():
         P1 = self.calcProjectionMatrix(mtx, R1, t1)
         P2 = self.calcProjectionMatrix(mtx, R2, t2)
         
-        imagePoints5= imagePoints3.reshape(1,144,2)
-        imagePoints6= imagePoints4.reshape(1,144,2)
-        
 #         imagePoints5,imagePoints6 = cv2.correctMatches(fundamental,imagePoints5,imagePoints6)
 #         print imagePoints3.T.shape
+        
         rrr2 = cv2.triangulatePoints(P1,P2,imagePoints3.T , imagePoints4.T)
 #         rrr2 = cv2.triangulatePoints(P1,P2,imagePoints5.T , imagePoints6.T)
 #         print rrr2.T
@@ -316,18 +336,52 @@ class thirdDianensionREcovery():
         points2 = vfunc(points,4)
         print 'recovered:\n', points2.reshape(144,3)[-4:]
         points2 = vfunc(points)
-        mm = np.multiply(points,0.050)
 #         print 'real:\n', left_real.reshape(140,3)
         
         oPoints3 = np.array([(478,1313),(432,1174)],dtype='float32')
         oPoints4 = np.array([(1883,1805),(1877,1637)],dtype='float32')
         
+        self.calculateEpilines(oPoints1, oPoints2, F, img1, img2)
+        
+        
+#         oPoints1 = oPoints1.reshape(1,4,2)
+#         oPoints2 = oPoints2.reshape(1,4,2)
+#         
+# #         oPoints1,oPoints2 = cv2.correctMatches(F,oPoints1,oPoints2)
+#         
+#         lines1 = cv2.computeCorrespondEpilines(oPoints1,1,F)
+#         lines1 = lines1.reshape(-1,3)
+#         
+#         lines3 = cv2.computeCorrespondEpilines(oPoints2,2,F)
+#         lines3 = lines3.reshape(-1,3)
+#         
+# #         newCamera,ret = cv2.getOptimalNewCameraMatrix(mtx,dist,shape,1,shape)
+# #         img1 = cv2.undistort(scenes[0].view,mtx,dist,None,newCamera)
+#         colors = getColors(len(lines1))
+#         for l,c in zip(lines1,colors):
+#             
+#             self.draw(img2, l, c)
+# #             self.draw(img1, l[0], c)
+#             
+#         for l,c in zip(lines3,colors):
+#             
+#             self.draw(img1, l, c)
+#         
+# #         cv2.imshow("repr",img1)
+#         print 'matches in ', 'results/difference_test_'+str(5)+'.jpg'
+#         cv2.imwrite('results/difference_test_'+str(5)+'.jpg',img1)
+#         cv2.imwrite('results/difference_test_'+str(6)+'.jpg',img2)
+        
+        return P1,P2, F
+    
+    def calculateEpilines(self,oPoints1,oPoints2,F,img1,img2):
+    
         oPoints1 = oPoints1.reshape(1,4,2)
         oPoints2 = oPoints2.reshape(1,4,2)
         
 #         oPoints1,oPoints2 = cv2.correctMatches(F,oPoints1,oPoints2)
         
-        lines1 = cv2.computeCorrespondEpilines(oPoints1,1,fundamental)
+        lines1 = cv2.computeCorrespondEpilines(oPoints1,1,F)
         lines1 = lines1.reshape(-1,3)
         
         lines3 = cv2.computeCorrespondEpilines(oPoints2,2,F)
@@ -346,8 +400,11 @@ class thirdDianensionREcovery():
             self.draw(img1, l, c)
         
 #         cv2.imshow("repr",img1)
+        print 'matches in ', 'results/difference_test_'+str(5)+'.jpg'
         cv2.imwrite('results/difference_test_'+str(5)+'.jpg',img1)
         cv2.imwrite('results/difference_test_'+str(6)+'.jpg',img2)
+        
+        return lines1,lines3
             
         
     
