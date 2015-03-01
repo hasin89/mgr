@@ -17,13 +17,12 @@ writepath = ''
 calibration_folder = 'calibration'
 
         
-def getCalibrationPointsForScene(scene, chessboard_detector,chessboardFieldSize=20):
+def getCalibrationPointsForScene(scene, chessboard_detector,chessboardFieldSize=1):
     
     corners, z = chessboard_detector.find_potential_corners(scene)
 
     offset = (z.offsetX, z.offsetY)
     print 'offset', offset
-    print 'corners', corners
     corners2Shifted = chessboard_detector.getZoneCorners(corners, offset)
     
     f = 'tmp_chessboard.jpg'
@@ -37,7 +36,7 @@ def getCalibrationPointsForScene(scene, chessboard_detector,chessboardFieldSize=
     
     # dodanie translacji i przemnożenie przez rozmiar pola szachownicy
     finalWP = np.multiply(finalWP, chessboardFieldSize)
-    finalP = offset + np.array(finalP)
+#     finalP= chessboard_detector.getGlobalCorners(finalP,offset)
     
     return finalP, finalWP, image, offset
 
@@ -61,9 +60,6 @@ def acumulateCalibrationPoints(images,objects,(board_w,board_h), flat):
     objectPoints = []
     imagePoints = []
     for im, re in zip(images, objects):
-        print 'n2', n2
-        print im.shape
-        print re.shape
         objectPoints.append(np.array(re).reshape((n2, 3))[:limit])
         imagePoints.append(im.reshape((n2, 2))[:limit])
         
@@ -98,6 +94,27 @@ def saveExtrinsicCalibration(rvecs, tvecs):
     f1 = open(f,'w')
     f1.write(json_string)
     f1.close()
+    
+def saveParameter(NParray,filename):
+
+    rveclist = NParray.tolist()
+    parameters = {
+                   'parameter' : rveclist,
+                  }
+    json_string = json.dumps(parameters)
+    f = getCalibrationPath()+filename+'.json'
+    f1 = open(f,'w')
+    f1.write(json_string)
+    f1.close()
+    
+def loadParameter(filename):
+    f = getCalibrationPath()+filename+'.json'
+    f1 = open(f,'r')
+    lines = f1.readline()
+    jobject = json.loads(lines)
+    f1.close()
+    
+    return map(np.array, [jobject['parameter']])
     
     
 def loadIntrinsicCalibration():
