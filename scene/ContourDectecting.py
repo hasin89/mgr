@@ -421,7 +421,7 @@ class ContourDetector():
                 rectangles.append((rectangle))
     
         # narysuj białe obszary - w ten obszary stykające się lub nakładaące zleją sie w jeden obszar
-        margin = int(round(tmpbinary.shape[1]*0.04,0))
+        margin = int(round(tmpbinary.shape[1]*0.01,0))
         #margin = 70 #50 #10
     
         for r in rectangles:
@@ -429,6 +429,8 @@ class ContourDetector():
             B = (r[0][2][0]+margin,r[0][2][1]+margin)
             cv2.rectangle(tmpbinary,A,B,255,-1)
             # cv2.drawContours(tmpbinary,r,-1,255,-1)
+            
+        cv2.imwrite('results/tmp.jpg',np.where(tmpbinary==255,255,0))
     
             #znajdź kontury wśród białych prostokątów na czarnym tle
         cntTMP, h = cv2.findContours(tmpbinary,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)

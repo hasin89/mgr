@@ -123,3 +123,30 @@ def drawMain(img,p1,p2):
 def drawMarker(img,p1,p2):
     cv2.line(img,p1,p2,(255,0,0),4)
     return img
+
+def drawQubic(qubic):
+#caly bialy
+        image = qubic.emptyImage.copy()
+        image3 = image.copy()
+        
+        for kk,wall in qubic.walls.iteritems():
+            
+            #zaznaczenie powieszhni ściany           
+            image3[wall.map == 1] = (255,255,255) 
+            for c in wall.contours:
+                ll = map(np.array,np.transpose(np.array(c.points)))
+                image3[ll] = (255,255,0)
+            
+#                 mark.drawHoughLines(c.lines, image3, (128,0,128), 1) 
+            drawHoughLines(wall.lines, image3, (128,0,128), 1)
+                
+        for vv in qubic.vertexes:
+            cv2.circle(image3,(vv[0],vv[1]),1,(10,0,255),2) 
+        if len(qubic.vertexes) > 7:
+#             raise Exception('too much vertexes')
+            pass
+        print 'wierzcholki: ', qubic.vertexes
+        
+#         f = open(fname,'rb')
+#         obj = pickle.load(f)
+        return image3

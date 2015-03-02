@@ -10,6 +10,7 @@ from analyticGeometry import convertLineToGeneralForm
 from zone import Zone
 
 import func.markElements as mark
+from func import analise
 
 
 class mirrorDetector(object):
@@ -39,6 +40,7 @@ class mirrorDetector(object):
     part = 4
     
     DST = None
+    THETA = 60 * np.pi/ 180
         
     def __init__(self,scene):
         
@@ -49,22 +51,29 @@ class mirrorDetector(object):
         
         self.mirror_line_Hough = None
         self.mirror_line = self.findMirrorLine(self.edges_mask)
-        
+        self.filterDown = self.calculateDownMask(self.edges_mask.shape)
         self.middle = self.calculateLineMiddle()
         self.mirrorZone = None
         
         
         
     
-    def getReflectedZone(self,mirror_line):
-        (x,y) = self.calculateLineMiddle()
-        reflected = Zone(self.scene.view,0,0,self.scene.width,y)
+    def getReflectedZone(self):
+        
+        cv2.imwrite('results/___.jpg',np.where(self.filterDown == 1,255,0))
+        image = self.scene.view.copy()
+        image[self.filterDown == 1] = (0,0,0)
+        
+        reflected = Zone(image,0,0,self.scene.width,self.scene.height)
         
         return reflected
     
-    def getDirectZone(self,mirror_line):
-        (x,y) = self.calculateLineMiddle()
-        direct = Zone(self.scene.view,0,y,self.scene.width,self.scene.height-y)
+    def getDirectZone(self):
+        
+        image = self.scene.view.copy()
+        image[self.filterDown == 0] = (0,0,0)
+        
+        direct = Zone(image,0,0,self.scene.width,self.scene.height)
         
         return direct
     
@@ -74,6 +83,52 @@ class mirrorDetector(object):
             y = int ( round (abs((self.mirror_line[0]*x+self.mirror_line[2])/self.mirror_line[1])))
             
             return (x,y)
+    
+    def calculateDownMask(self,shape):
+        mask = np.zeros(shape[:2])
+        if self.mirror_line != None:
+            rho, theta  = self.mirror_line_Hough
+            
+            xMax = shape[1]
+            yMax = shape[0]
+            
+            if theta != 0 :
+                
+                k = analise.convertLineToGeneralForm((rho,theta),shape)
+                l1 = analise.getLine( (0,0), (0,yMax), 0)
+                l2 = analise.getLine( (xMax,0), (xMax,yMax), 0)
+                
+                (x1,y1) = analise.get2LinesCrossing(l1,k)
+                (x2,y2) = analise.get2LinesCrossing(l2,k)
+                
+                p3 = (shape[1],shape[0])
+                p4 = (shape[1],shape[0])
+                
+                
+                    
+                if y1 < yMax:
+                    
+                    p4 = (0,shape[0]) 
+                    
+#                 if y1 >= yMax:
+#                     y = yMax
+#                     y1 = y
+#                     x1 = B/A * y + C/A
+#                 
+#                 if y2 <= 0:
+#                     y = 0
+#                     y2 = y
+#                     x2 = B/A * y + C/A
+#                     
+#                     p4 = (0,shape[1])
+                    
+                    
+            pt1 = (x1,y1)
+            pt2 = (x2,y2)
+            
+            triangle = np.array([ pt1, pt2, p3 ,  p4], np.int32)
+            cv2.fillConvexPoly(mask, triangle, 1)
+        return mask
     
     def calculatePointOnLine(self,x):
         x = int(x)
@@ -135,7 +190,7 @@ class mirrorDetector(object):
         
         threshold=int(mask.shape[1]/part)
         
-        self.h_treshold = threshold
+        self.h_treshold = 200
         #znaldz linie hougha
         lines2 = cv2.HoughLines(mask,rho,theta,threshold)
         
@@ -148,12 +203,14 @@ class mirrorDetector(object):
             print 'nieznaleziono linie lustra!'
             return None
         
-        for (rho,theta) in lines2[0][:7]:
-            print rho
+        for (rho,theta) in lines2[0]:
+            
             line = convertLineToGeneralForm((rho,theta),mask.shape)
-            if self.DST != None:
-                self.DST = 1200
+            if self.THETA != None:
+                A = (theta-self.THETA)**2
+            elif self.DST != None:
                 A = (rho-self.DST)**2
+            
             else:
                 A = abs((round(line[0],0)))
             if A<Amin:

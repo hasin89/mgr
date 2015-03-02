@@ -14,14 +14,16 @@ import func.markElements as mark
 
 from calculations.labeling import LabelFactory
 from ContourDectecting import ContourDetector
+from skimage import morphology
 
 
 class objectDetector2(object):
     
-    
+    mirrorOfsets = None
         
-    def __init__(self,md,image_origin):
+    def __init__(self,md,image_origin,mirrorOffsets=None):
         
+        self.mirrorOffsets = mirrorOffsets
         self.mirror_zone = md.mirrorZone
         self.mid = int(self.mirror_zone.offsetX+self.mirror_zone.width/2)
         self.md = md
@@ -33,18 +35,46 @@ class objectDetector2(object):
         
             
         img  = md.origin
-        img = cv2.GaussianBlur(img, (5, 5), 0)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        thrs = 180
-#         thrs = self.chesboardTreshold
-        retval, binary = cv2.threshold(gray, thrs, 1, cv2.THRESH_BINARY)
-        k = 10
+        k = 1
         kernel = np.ones((k,k))
-        binary = cv2.dilate(binary,kernel)
-        binary = cv2.erode(binary,kernel)
+        
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        
+        #edges mask
+        gauss_kernel = 5
+        tresholdMaxValue = 1
+        blockSize = 15
+        constant = -2
+        
+        distanceTreshold = 2
+        
+        gray_filtred = cv2.GaussianBlur(gray, (gauss_kernel, gauss_kernel), 0)
+        
+        edge_filtred = cv2.adaptiveThreshold(gray_filtred,
+                                             maxValue=tresholdMaxValue,
+                                             adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
+                                             thresholdType=cv2.THRESH_BINARY,
+                                             blockSize=blockSize,
+                                             C=constant)
+        
+        
+        # CV_DIST -> sasiedztwo 8 spojne
+        dst = cv2.distanceTransform(edge_filtred,cv2.cv.CV_DIST_C,3) # 3 to jest wielkość maski, która nie ma znaczenia dla 8 spojnego sasiedztwa
+#         
+#         # znajdz punkty o odleglosci wiekszej niz prog. generalnie grube krechy
+        mask = np.where(dst>distanceTreshold,1,0).astype('uint8')
+#         
+#         edges_mask = mask
+#         
+# #         edges_mask = md.edges_mask
+#         
+#         dilated = cv2.dilate(mask,kernel)
+#         mask = np.where(dilated>0,1,0)
                 
         final = np.zeros_like(img)
-        final[binary==1] = (255,255,255)
+        final[mask==1] = (255,255,255)
+        
+        binary = mask
         
         cv2.imwrite('results/test.jpg', final)
         
@@ -53,6 +83,28 @@ class objectDetector2(object):
         mirror_zone = md.mirrorZone
         zoneA =  Zone(binary,   0 ,0 , mirror_zone.width ,y)
         zoneC =  Zone(binary,   0 ,y , mirror_zone.width, mirror_zone.height - y)
+        
+        os = self.mirrorOffsets[0][1]
+        
+        final = np.zeros_like(img)
+        scan = zoneA.image.copy()
+        scan[:,os:] = 0
+        zoneA.image = scan.copy()
+        
+        final[scan==1] = (255,255,255)
+#         cv2.imwrite('results/test.jpg', final)
+        
+        os = self.mirrorOffsets[1][1]
+        zoneC.image[:,os:] = 0
+        
+        final = np.zeros_like(img)
+        scan = zoneC.image.copy()
+        scan[:,os:] = 0
+        zoneC.image = scan.copy()
+        
+        final[scan==1] = (255,255,255)
+        cv2.imwrite('results/test.jpg', final)
+        
         
         return zoneA, zoneC
         
@@ -72,38 +124,69 @@ class objectDetector2(object):
         mid = self.mid
         md = self.md
         
-        k = 1
+        edges_mask = ''
+        img = mirror_zone.image
+        
+        img = cv2.GaussianBlur(img, (5, 5), 0)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        thrs = 180
+        thrs = chesboardTreshold = 180
+        retval, binar = cv2.threshold(gray, thrs, 1, cv2.THRESH_BINARY)
+        size = 101
+        cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+        binar = cv2.dilate(binar,cross)
+        binar = cv2.erode(binar,cross)
+        
+        bb = np.zeros_like(img)
+        bb= np.where(binar == 1,255,0)
+        
+        fi = '100.jpg'
+        cv2.imwrite('results/objects_binary_%s'% fi,bb)
+        
+        #detection
+        
+        k = 4
         kernel = np.ones((k,k))
         dilated = cv2.dilate(md.edges_mask,kernel)
         edge = np.where(dilated>0,255,0)
-        if chessboard:
-            if multi == True:
-                zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mirror_zone.width-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
-                zoneC =  Zone(edge,   mirror_zone.offsetX ,md.calculatePointOnLine(mirror_zone.offsetX)[1]    ,mirror_zone.width-mirror_zone.offsetX                                    ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mirror_zone.offsetX)[1])
-            else:
+        
+        if False:
+            if chessboard:
+                if multi == True:
+                    y = md.calculatePointOnLine(mirror_zone.offsetX)[1]
+                    zoneA =  Zone(edge,   0 ,0 ,mirror_zone.width ,y)
+                    zoneC =  Zone(edge,   mirror_zone.offsetX ,y , mirror_zone.width,mirror_zone.height - y)
+                else:
+                    zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
+                    zoneC =  Zone(edge,   mirror_zone.offsetX ,md.calculatePointOnLine(mirror_zone.offsetX)[1]    ,mid-mirror_zone.offsetX                                    ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mirror_zone.offsetX)[1])
+                    
+            if not chessboard:
                 zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
                 zoneC =  Zone(edge,   mirror_zone.offsetX ,md.calculatePointOnLine(mirror_zone.offsetX)[1]    ,mid-mirror_zone.offsetX                                    ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mirror_zone.offsetX)[1])
+                zoneB =  Zone(edge,   mid                 ,mirror_zone.offsetY                                ,mirror_zone.offsetX+mirror_zone.width-mid                  ,md.calculatePointOnLine(mirror_zone.offsetX+mirror_zone.width)[1]-mirror_zone.offsetY)
+                zoneD =  Zone(edge,   mid                 ,md.calculatePointOnLine(mid)[1]                    ,mirror_zone.offsetX+mirror_zone.width-mid                  ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mid)[1] )
+        else:
+            
+            zoneA, zoneC = self.detect2(md)
+            
+#         margin = 20
+#         zoneA = self.setMargin(zoneA, margin)
+#         zoneC = self.setMargin(zoneC, margin)
+        
+        print 'results/zoneA.jpg'
+        cv2.imwrite('results/zoneA.jpg',np.where(zoneA.image == 1,255,0))
+        cv2.imwrite('results/zoneC.jpg',np.where(zoneC.image == 1,255,0))
                 
-        if not chessboard:
-            zoneA =  Zone(edge,   mirror_zone.offsetX ,mirror_zone.offsetY                                ,mid-mirror_zone.offsetX                                    ,md.calculatePointOnLine(mid)[1]-mirror_zone.offsetY)
-            zoneC =  Zone(edge,   mirror_zone.offsetX ,md.calculatePointOnLine(mirror_zone.offsetX)[1]    ,mid-mirror_zone.offsetX                                    ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mirror_zone.offsetX)[1])
-            zoneB =  Zone(edge,   mid                 ,mirror_zone.offsetY                                ,mirror_zone.offsetX+mirror_zone.width-mid                  ,md.calculatePointOnLine(mirror_zone.offsetX+mirror_zone.width)[1]-mirror_zone.offsetY)
-            zoneD =  Zone(edge,   mid                 ,md.calculatePointOnLine(mid)[1]                    ,mirror_zone.offsetX+mirror_zone.width-mid                  ,mirror_zone.offsetY+mirror_zone.height - md.calculatePointOnLine(mid)[1] )
-        
-        margin = 50
-        zoneA = self.setMargin(zoneA, margin)
-        zoneC = self.setMargin(zoneC, margin)
-        if not chessboard:
-            zoneB = self.setMargin(zoneB, margin)
-            zoneD = self.setMargin(zoneD, margin)
-        
-        
-        
         (x,y,w,h) = self.__findObject(zoneA.image)
         zoneA = Zone(self.origin,x+zoneA.offsetX,y+zoneA.offsetY,w,h)
         
         (x,y,w,h) = self.__findObject(zoneC.image)
         zoneC = Zone(self.origin,x+zoneC.offsetX,y+zoneC.offsetY,w,h)
+        
+        cv2.imwrite('results/zoneA.jpg',zoneA.image)
+        cv2.imwrite('results/zoneC.jpg',zoneC.image)
+        
+        return zoneA,zoneC
         
         if not chessboard:
             (x,y,w,h) = self.__findObject(zoneB.image)
@@ -131,12 +214,62 @@ class objectDetector2(object):
         
         
     def __findObject(self,origin):
-        lf = LabelFactory(origin)        
-        lf.run(origin)
+        
+        binary = origin.copy()
+               
+        shape = origin.shape[:2]
+               
+        size = 20
+        cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+        binary = cv2.dilate(binary,cross)
+#         binary = cv2.dilate(binary,cross)
+#         binary = cv2.dilate(binary,cross)
+
+        rho = 1
+        theta = np.pi/90
+        threshold = shape[0]/2
+        
+        lines = cv2.HoughLines(binary, rho, theta, threshold)
+        
+        img = np.zeros((shape[0],shape[1],3))
+        
+        img = np.where(binary==1,255,0)
+            
+        if lines is not None:
+            m,n = img.shape
+            for (rho, theta) in lines[0]:
+            # blue for infinite lines (only draw the 5 strongest)
+                x0 = np.cos(theta)*rho
+                y0 = np.sin(theta)*rho
+                pt1 = ( int(x0 + (m+n)*(-np.sin(theta))), int(y0 + (m+n)*np.cos(theta)) )
+                pt2 = ( int(x0 - (m+n)*(-np.sin(theta))), int(y0 - (m+n)*np.cos(theta)) )
+                
+                c = np.cos( abs(theta - np.pi/2) )
+                if c >0.8:
+                    mark.drawHoughLines([[rho, theta]], img, (128,0,128), 5)
+                    margin = 20
+                    triangle = np.array([ (pt1[0],pt1[1]-margin), (pt2[0],pt2[1]-margin), (shape[0],shape[1]) ], np.int32)
+                    cv2.fillConvexPoly(binary, triangle, 0)
+                    
+                if c <0.4:
+                    mark.drawHoughLines([[rho, theta]], img, (128,0,128), 5)
+                    triangle = np.array([ (pt1[0]+margin,pt1[1]), (pt2[0]+margin,pt2[1]), (shape[0],0), (0,0) ], np.int32)
+                    cv2.fillConvexPoly(binary, triangle, 0)
+        
+        size = 50
+        cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+        binary = cv2.dilate(binary,cross)
+        binary = cv2.erode(binary,cross)        
+            
+        cv2.imwrite('results/lines.jpg',img)    
+        cv2.imwrite('results/labeling.jpg',np.where(binary==1,255,0))
+                 
+        lf = LabelFactory(binary)   
+        cv2.imwrite('results/labeling.jpg',np.where(binary==1,255,0))     
+        lf.run(binary)
         lf.flattenLabels()
         
         contours = lf.convert2ContoursForm()
-        
         cd = ContourDetector(origin)
         objects,margin = cd.findObjects(contours)
         
@@ -197,7 +330,7 @@ class objectDetector2(object):
 #             cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
                     
         iMax = area.index(max(area))
-        
+        print iMax
         common = []
         if len(circles) > 0:
             for c in circles:

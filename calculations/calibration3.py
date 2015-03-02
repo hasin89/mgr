@@ -28,7 +28,8 @@ def getCalibrationPointsForScene(scene, chessboard_detector,chessboardFieldSize=
     f = 'tmp_chessboard.jpg'
     cv2.imwrite(f, z.image)
     gray = cv2.imread(f, flags=cv2.CV_LOAD_IMAGE_GRAYSCALE)
-    finalPoints, finalWorldPoints = chessboard_detector.getPoints(corners2Shifted, gray)
+    chessboard_type = 0
+    finalPoints, finalWorldPoints = chessboard_detector.getPoints(corners2Shifted, gray,chessboard_type)
     
     finalP = finalPoints.tolist()
     finalWP = finalWorldPoints.tolist()
@@ -145,8 +146,12 @@ def prepareCalibration(md, index):
     image = md.origin
     y = md.middle[1]
     
-    img[1] = Zone(image, 0, 0, image.shape[1], y)
-    img[2] = Zone(image, 0, y, image.shape[1], image.shape[0] - y)
+    
+    img[1] = md.getReflectedZone()
+    img[2] = md.getDirectZone()
+    
+    cv2.imwrite('up.jpg',img[1].image)
+    cv2.imwrite('down.jpg',img[2].image)
         
     if not os.path.isdir('results'):
         print 'tworzenie folderu \'results\''

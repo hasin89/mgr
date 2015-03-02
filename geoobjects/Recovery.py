@@ -375,9 +375,13 @@ class thirdDianensionREcovery():
         return P1,P2, F
     
     def calculateEpilines(self,oPoints1,oPoints2,F,img1,img2):
-    
-        oPoints1 = oPoints1.reshape(1,4,2)
-        oPoints2 = oPoints2.reshape(1,4,2)
+        n = oPoints1.shape[0]
+        oPoints1 = oPoints1.reshape(1,n,2)
+        
+        m = oPoints2.shape[0]
+        oPoints2 = oPoints2.reshape(1,m,2)
+        
+        print 'puntow', n,m
         
 #         oPoints1,oPoints2 = cv2.correctMatches(F,oPoints1,oPoints2)
         
@@ -389,14 +393,14 @@ class thirdDianensionREcovery():
         
 #         newCamera,ret = cv2.getOptimalNewCameraMatrix(mtx,dist,shape,1,shape)
 #         img1 = cv2.undistort(scenes[0].view,mtx,dist,None,newCamera)
-        colors = getColors(len(lines1))
-        for l,c in zip(lines1,colors):
-            
+        colors = getColors(max(len(lines1),len(lines3)))
+        for l,c,p in zip(lines1,colors,oPoints2[0]):
+            cv2.circle(img2, (p[1],p[0]), 5, c, -1) 
             self.draw(img2, l, c)
 #             self.draw(img1, l[0], c)
             
-        for l,c in zip(lines3,colors):
-            
+        for l,c,p in zip(lines3,colors,oPoints1[0]):
+            cv2.circle(img1, (p[1],p[0]), 5, c, -1) 
             self.draw(img1, l, c)
         
 #         cv2.imshow("repr",img1)

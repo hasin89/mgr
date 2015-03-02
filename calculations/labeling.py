@@ -116,8 +116,17 @@ class LabelFactory(object):
         self.L[currentPoint] = self.L[point]
         
     def copy2(self,currentPoint,point1,point2):
-        self.L[currentPoint] = self._union(self.L[point1], self.L[point2])
-        
+        if self.L[point2] in self.P.keys():
+            if self.L[point1] in self.P.keys():
+                self.L[currentPoint] = self._union(self.L[point1], self.L[point2])
+            else:
+#                 print 'error', point1, (currentPoint[0],currentPoint[1]), self.L[point2]
+                self.L[currentPoint] = self.L[point2]
+        else:
+#             print 'error', point1, (currentPoint[0],currentPoint[1]), self.L[point2]
+            self.L[currentPoint] = self.L[point1]
+#             self.L[(currentPoint[0],currentPoint[1])] = self.copy(currentPoint,point1)
+            
     def run(self,binary):
         binary[0,:] = 0
         binary[-1,:] = 0
@@ -149,7 +158,7 @@ class LabelFactory(object):
                 if binary[a]:
                     copy2(e, c, a)
                 #d
-                elif binary[d]:
+                elif binary[d] and self.L[d] != 0:
                     copy2(e, c, d)
                 else:
                     copy(e, c)

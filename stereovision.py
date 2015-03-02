@@ -33,9 +33,11 @@ calibration.writepath = writepath
 # adjustable parameters for different types of scene
 
 chessboardDetectionTreshold = [150,150]  # -> empirical for the background of the chesssboard
-cornersVerificationCircleDiameter = [10, 26]  # -> usually less than 25% of chessboard field pixel size o: mirrored, direct
+cornersVerificationCircleDiameter = [10, 31]  # -> usually less than 25% of chessboard field pixel size o: mirrored, direct
 board_w = 10
 board_h = 7
+
+thresholdGetFields = 140
 
 
 def loadImage(filename, factor=1):
@@ -268,7 +270,7 @@ def calibrate():
         cd.image_type = i
         cd.filename = filename
         
-        cd.thresholdGetFields = 140
+        cd.thresholdGetFields = thresholdGetFields
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -316,17 +318,17 @@ def poseEstimation():
     filename = sys.argv[2]
     scene = loadImage(filename)
     shape = scene.view.shape[:2]
-    
+    print 'shape = ',shape
     md = mirrorDetector(scene)
     mirrorZone = md.findMirrorZone()
     
     mtx,dist = calibration.loadIntrinsicCalibration()
-    print mtx
-    print dist
+    mtx0  = mtx
+    dist0 = dist
     
     index = 0
     filenames = calibration.prepareCalibration(md, index)
-    print filenames
+    print 'filenames = ',filenames
     
     imag = {}
     real = {}
@@ -345,7 +347,7 @@ def poseEstimation():
         cd.image_index = index
         cd.image_type = i
         cd.filename = parts[-1]
-        cd.thresholdGetFields = 140
+        cd.thresholdGetFields = 130
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -361,30 +363,14 @@ def poseEstimation():
         
         imag[i] = finalP
         real[i] = finalWP  
-        print i
         
-    
-#     scan = np.zeros((shape[0],shape[1],3))    
-#     for f in filenames:
-#         scene = loadImage(filename)
-#         scan = scene.view.copy()
-#         c1 = imag[0]
-#         print c1
-#         for r in c1:
-#             for c in r:
-#                 ppp = (c[1],c[0])
-#                 ppp = map(int,ppp)
-#                 ppp = tuple(ppp)
-#                 print ppp
-#                 cv2.circle(scan,ppp,5,(255,255,255),-1)
-#         
-#         
 #         window = cv2.namedWindow('a',cv2.WINDOW_NORMAL)
 #         cv2.resizeWindow('a',shape[0]/4,shape[1]/4)
 #         cv2.imshow('a',scan)
 #     #     time.sleep(10)
 #         cv2.waitKey()
 #         cv2.destroyAllWindows()
+
     calibrationTool = Recovery.thirdDianensionREcovery()
     
     trueOffsets = []
@@ -399,41 +385,53 @@ def poseEstimation():
     down = rearange(down)
 
     real[0] = rearange(real[0])
-    real[1] = rearange(real[1])
     
-    up_real = real[0]
-    down_real = real[1]
+#     modelPoints = [
+#                    [(431,1174),(479,1311),(385,1290),(338,1156)],
+#                    [(1877,1635),(1880,1804),(2037,1872),(2038,1701)]
+#                    ]
     
-    offsetUp = (62,   1617)
-    offsetDown = (1424 , 2240)
+    imagePoints2, mtx, dist, rvecs, tvecs, real, images = calibrationTool.calibrateMulti(filenames, shape, [up, down], real[0], trueOffsets, True, mtx0 ,dist0)
+   
     
-#     offsetUp = (0, 0)
-#     offsetDown = (0 , 0)
+    P1,P2,F = calibrationTool.getFundamental(imagePoints2, modelPoints, rvecs, tvecs, mtx, dist, real, images)
+    print P1
+    print P2
+    print F
+    calibration.saveParameter(P1, 'P1')
+    calibration.saveParameter(P2, 'P2')
+    calibration.saveParameter(F, 'Fundamental')
+    calibration.saveParameter(np.array(filenames), 'filenames')
     
-    
-    modelPoints = [
-                   [(431,1174),(479,1311),(385,1290),(338,1156)],
-                   [(1877,1635),(1880,1804),(2037,1872),(2038,1701)]
-                   ]
+    calibration.saveParameter(np.array(trueOffsets), 'TrueOffset')
 
-    imagePoints2, mtx, dist, rvecs, tvecs, left_real, images = calibrationTool.calibrateMulti(filenames, shape, [up, down], real[0], trueOffsets)
-    
-    calibrationTool.triangulate(imagePoints2, modelPoints, rvecs, tvecs, mtx, dist, left_real, images)
-    print mtx
-       
         
 def localize():
+    d = calibration.loadParameter('TrueOffset')
+    offsets = d[0].tolist()
+
+    #wczytanie parametrów
+    filenames = calibration.loadParameter('filenames')
+    P1 = calibration.loadParameter('P1')
+    P2 = calibration.loadParameter('P2')
+    F = calibration.loadParameter('Fundamental')
+    imp = calibration.loadParameter('imagePoints2')
+    
+    filenames = filenames[0].tolist()
+    scenes = []
+    for f in filenames:
+        scenes.append( loadImage(f) )
+    images = []
+    for scene in scenes:
+        images.append( scene.view.copy() )
+            
+    fundamental = F[0]
+    P1 = P1[0]
+    P2 = P2[0]
+    imagePoints2 = imp[0]
+    
     filename = sys.argv[2]
     print filename
-    
-    #wczytanie kalibracji
-    mtx, dist = calibration.loadIntrinsicCalibration()
-    rvec, tvec = calibration.loadExtrinsicCalibration()
-    
-    print mtx
-    print dist
-    print 'R', rvec
-    print 'T', tvec 
     
     # nastepuje lokalizacja obiektu
     scene = loadImage(filename)
@@ -444,7 +442,7 @@ def localize():
     print 'zapisywanie do ' + f
     cv2.imwrite(f, mirrorZone.preview)
     
-    od = objectDetector2(md, md.origin)
+    od = objectDetector2(md, md.origin,offsets)
     zoneA, zoneC = od.detect(chessboard=True, multi=True)
     
     f = writepath + 'objectA.jpg'
@@ -452,17 +450,74 @@ def localize():
     cv2.imwrite(f, zoneA.image)
     
     f = writepath + 'objectC.jpg'
-    print 'zapisywanie do' + f
+    print 'zapisywanie do ' + f
     cv2.imwrite(f, zoneC.image)
     
-    print zoneA
+    modelPoints= [[],[]]
+    
     qubicA = QubicObject(zoneA.image)
     
-#         ed = edgeDetector(zoneC.image.copy())
-#         mask = ed.getSobel()
+    imgQ = mark.drawQubic(qubicA)
+    cv2.imwrite('results/object_structure_A.jpg',imgQ)
     
     qubicC = QubicObject(zoneC.image)
-        
+    mark.drawQubic(qubicC)
+    imgQ = mark.drawQubic(qubicC)
+    cv2.imwrite('results/object_structureC.jpg',imgQ) 
+    
+    objectsOffsets = [[],[]]
+     
+    modelPoints[0] = qubicA.vertexes
+    objectsOffsets[0] = (zoneA.offsetX, zoneA.offsetY)
+    
+    modelPoints[1] = qubicC.vertexes
+    objectsOffsets[1] = (zoneC.offsetX, zoneC.offsetY)
+    
+    print objectsOffsets
+    
+    modelPoints2 = []
+    for points,offset in zip(modelPoints,objectsOffsets):
+        tmp =  offset + np.array(points)
+        modelPoints2.append( tmp )
+    
+    #rysowanie puntow
+    d = 0
+    for img,model in zip(images,modelPoints2):
+        for p in model:
+            cv2.circle(img, (p[0],p[1]), 5, (0,0,0), -1) 
+        cv2.imwrite('results/marked%d.jpg'%d,img)
+        d += 1
+    
+    #pasowanie punktow
+    oPoints1 = np.array(modelPoints2[0],dtype='float32')
+    oPoints2 = np.array(modelPoints2[1],dtype='float32')
+    
+    calibrationTool = Recovery.thirdDianensionREcovery()
+    
+    oPoints1 = swap(oPoints1)
+    oPoints2 = swap(oPoints2)
+    
+    lines1, lines2 = calibrationTool.calculateEpilines(oPoints1, oPoints2, fundamental, images[0], images[1])
+    
+    oPoints1, oPoints2 = calibrationTool.matchPoints(oPoints1,oPoints2,lines1,lines2)
+    
+    #triangulacja
+    imagePoints3 = np.append(imagePoints2[0], oPoints1, 0)
+    imagePoints4 = np.append(imagePoints2[1], oPoints2, 0)
+    
+    n = imagePoints3.shape[0]
+    m = oPoints1.shape[0]
+            
+#     rrr2 = cv2.triangulatePoints(P1,P2,imagePoints3.T , imagePoints4.T)
+#     vfunc = np.vectorize(round)
+#     points = cv2.convertPointsFromHomogeneous(rrr2.T)
+#     
+#     np.set_printoptions(precision=6,suppress=True)
+#     
+#     points2 = vfunc(points,4)
+#     print 'recovered2:\n', points2.reshape(n,3)[-m:]
+    
+    
 
 if __name__ == '__main__':
     # sys.stdout = codecs.getwriter('utf8')(sys.stdout)
@@ -482,6 +537,7 @@ if __name__ == '__main__':
         
     elif sys.argv[1] == 'localize':
         print 'localization'
+        localize()
         
     else:
         massage = "Podaj tryb pracy i nazwy obrazów źródłowych"
