@@ -15,8 +15,19 @@ class edgeDetector(object):
         
     def __init__(self,image,gauss_kernel=5):
         gauss_kernel = 5
+        
+#         image = self.gammaCorection(image)
+        
         self.image = image
         self.blur = cv2.GaussianBlur(image, (gauss_kernel, gauss_kernel), 0)
+        
+    def gammaCorection(self,gray):
+        gamma_correction = 1.55
+        img_tmp = gray / 255.0
+        cv2.pow(img_tmp, gamma_correction, img_tmp)
+        gamma = img_tmp * 255.0
+        gamma = gamma.astype('uint8')
+        return gamma
         
 
     def SobelChanel(self,color):
