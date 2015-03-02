@@ -86,13 +86,14 @@ class thirdDianensionREcovery():
         
         
     def calcTriangulationError(self,idealPoints,calculatedPoints):
-        length = max(idealPoints.shape)
+        length1 = max(idealPoints.shape)
+        length2 = max(calculatedPoints.shape)
         errorX = 0
         errorY = 0
         errorZ = 0
         counter = 0.0
         idealPoints = idealPoints.reshape(140,3)
-        calculatedPoints = calculatedPoints.reshape(144,3)
+        calculatedPoints = calculatedPoints.reshape(length2,3)
         
         for ideal,real in zip(idealPoints,calculatedPoints):
             errorX += abs(ideal[0]-real[0])
@@ -283,19 +284,23 @@ class thirdDianensionREcovery():
         return imagePoints2, mtx, dist, rvecs, tvecs, left_real, images
         
         
-    def getFundamental(self, imagePoints2, modelPoints  , rvecs,tvecs,mtx,dist, real, images):
+    def getFundamental(self, imagePoints2, rvecs,tvecs,mtx,dist, real, images, modelPoints=None):
         
         img1 = images[0]
         img2 = images[1]
         
-        oPoints1 = np.array(modelPoints[0], dtype='float32')
-        oPoints2 = np.array(modelPoints[1], dtype='float32')
-        
-#         oPoints1 = np.array([(431,1174),(479,1311),(385,1290),(338,1156)],dtype='float32')
-#         oPoints2 = np.array([(1877,1635),(1880,1804),(2037,1872),(2038,1701)],dtype='float32')
-        
-        imagePoints3 = np.append(imagePoints2[0], oPoints1, 0)
-        imagePoints4 = np.append(imagePoints2[1], oPoints2, 0)
+        if modelPoints is not None:
+            oPoints1 = np.array(modelPoints[0], dtype='float32')
+            oPoints2 = np.array(modelPoints[1], dtype='float32')
+            
+    #         oPoints1 = np.array([(431,1174),(479,1311),(385,1290),(338,1156)],dtype='float32')
+    #         oPoints2 = np.array([(1877,1635),(1880,1804),(2037,1872),(2038,1701)],dtype='float32')
+            
+            imagePoints3 = np.append(imagePoints2[0], oPoints1, 0)
+            imagePoints4 = np.append(imagePoints2[1], oPoints2, 0)
+        else:
+            imagePoints3 = imagePoints2[0]
+            imagePoints4 = imagePoints2[1]
         
         print 'shape img', imagePoints3.T
         
@@ -332,16 +337,14 @@ class thirdDianensionREcovery():
         points = cv2.convertPointsFromHomogeneous(rrr2.T)
         
         print 'triangulation error', self.calcTriangulationError(real,points)
+        length2 = max(points.shape)
         
         points2 = vfunc(points,4)
-        print 'recovered:\n', points2.reshape(144,3)[-4:]
+        print 'recovered:\n', points2.reshape(length2,3)[-4:]
         points2 = vfunc(points)
 #         print 'real:\n', left_real.reshape(140,3)
         
-        oPoints3 = np.array([(478,1313),(432,1174)],dtype='float32')
-        oPoints4 = np.array([(1883,1805),(1877,1637)],dtype='float32')
-        
-        self.calculateEpilines(oPoints1, oPoints2, F, img1, img2)
+#         self.calculateEpilines(oPoints1, oPoints2, F, img1, img2)
         
         
 #         oPoints1 = oPoints1.reshape(1,4,2)

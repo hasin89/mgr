@@ -33,7 +33,7 @@ calibration.writepath = writepath
 # adjustable parameters for different types of scene
 
 chessboardDetectionTreshold = [150,150]  # -> empirical for the background of the chesssboard
-cornersVerificationCircleDiameter = [10, 31]  # -> usually less than 25% of chessboard field pixel size o: mirrored, direct
+cornersVerificationCircleDiameter = [9, 31]  # -> usually less than 25% of chessboard field pixel size o: mirrored, direct
 board_w = 10
 board_h = 7
 
@@ -147,10 +147,11 @@ def swap(A):
     return B
 
 def rearange(A):
-    
+    print 'shape',A.shape
     D = A.shape[2]
     rows = 14
     cols = 10
+    print 'destination shape',(rows,cols,D)
     A.reshape((rows,cols,D))
     C = np.zeros_like(A)
     
@@ -228,6 +229,7 @@ def calibrate():
     # nastepuje kalibracja kamery obrazami szachownicy
     names1 = sys.argv[2]
     names2 = sys.argv[3]
+    names3 = sys.argv[4]
     if names1 == 'None':
         mirrored = []
     else:
@@ -237,10 +239,25 @@ def calibrate():
         direct = []
     else:
         direct = names2.split("|")
+    if names3 == 'None':
+        both = []
+    else:
+        both = names3.split("|")
+        
+    for index,b in enumerate(both):
+        print b
+        scene = loadImage(b)
+        md = mirrorDetector(scene)
+        mirrorZone = md.findMirrorZone()
+        filenames = calibration.prepareCalibration(md, index+1)
+        mirrored.append(filenames[0])
+        direct.append(filenames[1])
         
     counter = len(mirrored)
     print 'counter', counter
     mirrored.extend(direct)
+    
+    print 'calibration files:', mirrored
     
     imag = []
     real = []
@@ -268,7 +285,9 @@ def calibrate():
         cd = ChessboardDetector(chessboardDetectionTreshold[i], (board_w, board_h), cornersVerificationCircleDiameter[i])
         cd.image_index = index
         cd.image_type = i
-        cd.filename = filename
+        parts = filename.split('/')
+        cd.filename = parts[-1]
+        print 'FILE:',cd.filename 
         
         cd.thresholdGetFields = thresholdGetFields
         
@@ -311,6 +330,10 @@ def calibrate():
     print 'R', rvecs[-1]
     print 'T', tvecs[-1]
     
+    for image,filename in zip(images,filenames):
+        fnames = filename.split('/')
+        cv2.imwrite('results/calibration/source/'+fnames[-1],image)
+    
     calibration.saveIntrinsicCalibration(mtx,dist)
 
 
@@ -347,7 +370,8 @@ def poseEstimation():
         cd.image_index = index
         cd.image_type = i
         cd.filename = parts[-1]
-        cd.thresholdGetFields = 130
+        print 'FILE:',cd.filename 
+        cd.thresholdGetFields = 160
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -394,7 +418,7 @@ def poseEstimation():
     imagePoints2, mtx, dist, rvecs, tvecs, real, images = calibrationTool.calibrateMulti(filenames, shape, [up, down], real[0], trueOffsets, True, mtx0 ,dist0)
    
     
-    P1,P2,F = calibrationTool.getFundamental(imagePoints2, modelPoints, rvecs, tvecs, mtx, dist, real, images)
+    P1,P2,F = calibrationTool.getFundamental(imagePoints2, rvecs, tvecs, mtx, dist, real, images, modelPoints=None)
     print P1
     print P2
     print F

@@ -102,6 +102,7 @@ class edgeDetectionTest(unittest.TestCase):
         errorZ = 0
         counter = 0.0
         idealPoints = idealPoints.reshape(140,3)
+        print 'calc', calculatedPoints.shape
         calculatedPoints = calculatedPoints.reshape(144,3)
         
         for ideal,real in zip(idealPoints,calculatedPoints):
@@ -218,6 +219,10 @@ class edgeDetectionTest(unittest.TestCase):
         
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
         
+        
+        print imagePoints2.T.shape
+        
+        
         img1 = scene1.view.copy()
         img2 = scene2.view.copy()
         
@@ -255,6 +260,8 @@ class edgeDetectionTest(unittest.TestCase):
         
 #         imagePoints5,imagePoints6 = cv2.correctMatches(fundamental,imagePoints5,imagePoints6)
 #         print imagePoints3.T.shape
+        print imagePoints3.T.shape
+        print imagePoints4.T.shape
         rrr2 = cv2.triangulatePoints(P1,P2,imagePoints3.T , imagePoints4.T)
 #         rrr2 = cv2.triangulatePoints(P1,P2,imagePoints5.T , imagePoints6.T)
 #         print rrr2.T
