@@ -531,7 +531,8 @@ class ChessboardDetector(object):
     
     def removePointsFromList(self,points,obsoletePoints):
         for o in obsoletePoints:
-            points.remove(o)
+            if o in points:
+                points.remove(o)
         return points
     
     def find_objects(self,img):
