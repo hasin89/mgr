@@ -7,7 +7,6 @@ Created on Sep 3, 2014
 import func.trackFeatures as features
 import cv2
 from edge import edgeMap
-from md5 import blocksize
 import numpy as np
 
 

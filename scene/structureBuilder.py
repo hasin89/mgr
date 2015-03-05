@@ -10,8 +10,6 @@ from geoobjects.Vertex import Vertex
 import cv2
 import copy
 import analyticGeometry as ag
-from LineDectecting import LineDetector
-import numpy as np
 
 class StructureBuilder(object):
     

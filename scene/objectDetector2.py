@@ -7,14 +7,10 @@ Created on Oct 31, 2014
 '''
 import cv2
 import numpy as np
-from analyticGeometry import convertLineToGeneralForm
 from zone import Zone
 
-import func.markElements as mark
 
 from calculations.labeling import LabelFactory
-from ContourDectecting import ContourDetector
-from skimage import morphology
 
 
 class objectDetector2(object):
@@ -24,6 +20,7 @@ class objectDetector2(object):
     def __init__(self,md,image_origin,mirrorOffsets=None):
         
         self.mirrorOffsets = mirrorOffsets
+        
         self.mirror_zone = md.mirrorZone
         self.mid = int(self.mirror_zone.offsetX+self.mirror_zone.width/2)
         self.md = md
@@ -32,8 +29,6 @@ class objectDetector2(object):
         
     def detect2(self,md):
         
-        
-            
         img  = md.origin
         k = 1
         kernel = np.ones((k,k))

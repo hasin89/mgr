@@ -6,7 +6,6 @@ Created on Sep 3, 2014
 '''
 import cv2
 
-from func import histogram
 from structureBuilder import StructureBuilder
 import drawings.Draw as Draw
 from CornerDectecting import CornerDetector
