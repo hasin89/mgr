@@ -1,20 +1,14 @@
 #!/usr/bin/python -u
 # -*- coding: utf-8 -*-
 
-import time
 import numpy as np
 import cv2
 from calculations import labeling
 from scene.zone import Zone
-from scene.scene import Scene
-from scene import edgeDetector, zone
 from skimage import measure
 from skimage import feature
-from skimage import morphology,draw,transform
+from skimage import morphology,draw
 
-from func.trackFeatures import threshold
-from numpy.ma.core import cos, cosh, mean
-import time
 import gc
 
 '''
