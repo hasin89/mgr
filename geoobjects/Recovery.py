@@ -157,7 +157,127 @@ class thirdDianensionREcovery():
 #         cv2.circle(img,(int (imgpts[7][0][1]) ,int (imgpts[7][0][0])),2,(255,0,255),-1)
         return img
     
-    def matchPoints(self,oPoints1,oPoints2,lines1,lines2):
+    def __sortDictionary(self,x):
+        
+        sorted_x = sorted(x.items(), key=operator.itemgetter(1))
+        
+        return sorted_x
+    
+    def __matchLines(self,p_lines):
+        final = {}
+        print p_lines
+        for k1, line1 in enumerate(p_lines):
+            for k2,line2 in enumerate(p_lines):
+                if k1==k2:
+                    break
+                if line1[0][0] == line2[0][0]:
+                    v1 = p_lines[k1][0][1]**2 + p_lines[k2][1][1] **2
+                    v2 = p_lines[k1][1][1]**2 + p_lines[k2][0][1] **2
+                    if v2<v1:
+                        final[k1] = p_lines[k1][1][0]
+                        final[k2] = p_lines[k1][0][0]
+                    if v2>v1:
+                        final[k1] = p_lines[k1][0][0]
+                        final[k2] = p_lines[k1][1][0]
+                        
+                else:
+                    final[k1] = p_lines[k1][0][0]
+        return final
+    
+    def __matchLinesP(self,oPoints2,lines1):
+        SumMin = 100000000
+        association = None
+        for points in itertools.permutations(oPoints2.tolist()):
+            Sum = 0
+            for p,line in zip(points,lines1):
+                dist = an.calcDistFromLine(p, line)
+                dist = dist*dist
+                Sum += dist
+            if Sum<SumMin:
+                SumMin = Sum
+                association = points
+        return association
+    
+    def matchPoints(self,oPoints1,oPoints2,lines1,lines2,img1,img2):
+        
+        colors = getColors(max(len(lines1),len(lines2)))
+        for l,c in zip(lines1,colors):
+            c = (255,0,0)
+            self.draw(img2, l, c)
+            
+        for l,c in zip(lines2,colors):
+            c = (255,0,0)
+            self.draw(img1, l, c)
+
+        pairs1 = {}
+        association = self.__matchLinesP(oPoints2, lines1)
+        for p1,p2 in zip(association, oPoints1):
+            pairs1[tuple(p2)] = tuple(p1)
+        
+        pairs2 = {}
+        association = self.__matchLinesP(oPoints1, lines2)
+        for p1,p2 in zip(association, oPoints2):
+            pairs2[tuple(p1)] = tuple(p2)
+            a,b = pairs1[tuple(p1)], tuple(p2)
+            if not ( (int(a[0]) == int(b[0])) and (int(a[1]) == int(b[1])) ):
+                print 'warning',a,b
+#                 raise Exception("points doesn't match")
+
+        colors = getColors( len(pairs1) )
+            
+        i= 0
+        for k,v in pairs1.iteritems():
+            c = colors[i]
+            k = map(int,k)
+            v = map(int,v)
+            cv2.circle(img1, (k[1],k[0]), 5, c, -1)
+            cv2.circle(img2, (v[1],v[0]), 5, c, -1)
+            i += 1     
+            
+        
+        
+         
+        oPoints1 = np.array(pairs1.keys(),dtype=np.uint32)
+        
+        oPoints2 =  np.array(pairs1.values(),dtype=np.uint32)
+        
+#         print oPoints1
+#         print oPoints2
+        
+#          p_lines1 = []
+#         for p in oPoints2:    
+#             dists = {}
+#             for k,line in enumerate(lines1):
+#                 dist = an.calcDistFromLine(p, line)
+#                 dists[k] = dist
+#             dists = self.__sortDictionary(dists)[:2]
+#             p_lines1.append(dists)
+#         final = self.__matchLines(p_lines1)
+#         print final
+#         for k,v in final.iteritems():
+#             print 'pairs:', oPoints2[k], oPoints1[v]
+#             
+#         for l,c in zip(lines2,colors):
+#             self.draw(img1, l, c)
+#         
+#         p_lines2 = []
+#         for p in oPoints1:    
+#             cv2.circle(img1, (p[1],p[0]), 5, (255,0,0), -1) 
+#             
+#             dists = {}
+#             for k,line in enumerate(lines1):
+#                 dist = an.calcDistFromLine(p, line)
+#                 dists[k] = dist
+#             dists = self.__sortDictionary(dists)[:2]
+#             p_lines2.append(dists)
+#         final = self.__matchLines(p_lines2)
+#         print final
+#         for k,v in final.iteritems():
+#             print 'pairs:',  oPoints2[v], oPoints1[k]
+            
+        print 'matches in ', 'results/difference_test_'+str(5)+'.jpg'
+        cv2.imwrite('results/difference_test_'+str(5)+'.jpg',img1)
+        cv2.imwrite('results/difference_test_'+str(6)+'.jpg',img2)
         
         return oPoints1,oPoints2
     
@@ -166,7 +286,7 @@ class thirdDianensionREcovery():
         jedna wspolna lista lista punktow kalibracyjnych wystarcza
         chessPoints - lista punktow dla kazdej z szachownic
         '''
-        chess_factor = 20
+        chess_factor = [20,19.85,20]
         factor = 1
         real = np.multiply(real,chess_factor)
         
