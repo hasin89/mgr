@@ -510,20 +510,24 @@ class thirdDianensionREcovery():
         
 #         newCamera,ret = cv2.getOptimalNewCameraMatrix(mtx,dist,shape,1,shape)
 #         img1 = cv2.undistort(scenes[0].view,mtx,dist,None,newCamera)
-        colors = getColors(max(len(lines1),len(lines3)))
-        for l,c,p in zip(lines1,colors,oPoints2[0]):
-            cv2.circle(img2, (p[1],p[0]), 5, c, -1) 
-            self.draw(img2, l, c)
-#             self.draw(img1, l[0], c)
-            
-        for l,c,p in zip(lines3,colors,oPoints1[0]):
-            cv2.circle(img1, (p[1],p[0]), 5, c, -1) 
-            self.draw(img1, l, c)
+#         colors = getColors(max(len(lines1),len(lines3)))
+#         for l,c in zip(lines1,colors):
+#             self.draw(img2, l, c)
+# 
+#         for p in oPoints2[0]:
+#             cv2.circle(img2, (p[1],p[0]), 5, (255,0,0), -1) 
+# #             self.draw(img1, l[0], c)
+#             
+#         for l,c in zip(lines3,colors):
+#             self.draw(img1, l, c)
+#             
+#         for p in oPoints1[0]:    
+#             cv2.circle(img1, (p[1],p[0]), 5, (255,0,0), -1) 
         
 #         cv2.imshow("repr",img1)
-        print 'matches in ', 'results/difference_test_'+str(5)+'.jpg'
-        cv2.imwrite('results/difference_test_'+str(5)+'.jpg',img1)
-        cv2.imwrite('results/difference_test_'+str(6)+'.jpg',img2)
+#         print 'matches in ', 'results/difference_test_'+str(5)+'.jpg'
+#         cv2.imwrite('results/difference_test_'+str(5)+'.jpg',img1)
+#         cv2.imwrite('results/difference_test_'+str(6)+'.jpg',img2)
         
         return lines1,lines3
             
