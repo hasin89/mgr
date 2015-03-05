@@ -181,6 +181,7 @@ class ChessboardDetector(object):
                 counter +=1
             else:
                 cv2.circle(bb,(p[1],p[0]),4,(255,0,255),-1 )
+                pass
                 
         cv2.imwrite('results/corner_types_%d_%s' % (self.image_index,self.filename),bb)
         shape = binary.shape
@@ -190,8 +191,8 @@ class ChessboardDetector(object):
             print 'empty!'
             
         p1,p2 = self.getBendLine(edgePoints, shape)
-        cv2.line(bb, (p1[0],p1[1]),(p2[0],p2[1]),(255,0,0),3)
-        cv2.imwrite('results/q.jpg',bb)
+#         cv2.line(bb, (p1[0],p1[1]),(p2[0],p2[1]),(255,0,0),3)
+#         cv2.imwrite('results/q.jpg',bb)
         
         
         leftMask = self.getLeftChessboardMask(shape, p1, p2)
@@ -359,8 +360,8 @@ class ChessboardDetector(object):
         from drawings.Draw import getColors
         
         newPoints = list(points)
-        bb = np.zeros((shape[0],shape[1],3))
-        bb = self.origin.copy()
+#         bb = np.zeros((shape[0],shape[1],3))
+#         bb = self.origin.copy()
         
         colors = getColors(140)
         i=0
@@ -382,10 +383,10 @@ class ChessboardDetector(object):
             newPoints = self.removePointsFromList(points, scanLinePoints)
             
             
-        if left:
-            cv2.imwrite('results/pointss_left%s' % self.filename,bb)
-        else:
-            cv2.imwrite('results/pointss_right%s' % self.filename,bb)
+#         if left:
+#             cv2.imwrite('results/pointss_left%s' % self.filename,bb)
+#         else:
+#             cv2.imwrite('results/pointss_right%s' % self.filename,bb)
         
         return orderedPoints
     
@@ -540,11 +541,11 @@ class ChessboardDetector(object):
         binar = cv2.dilate(binar,cross)
         binar = cv2.erode(binar,cross)
         
-        bb = np.zeros_like(img)
-        bb= np.where(binar == 1,255,0)
-        
-        print 'results/objects_binary_%s'% self.filename
-        cv2.imwrite('results/objects_binary_%s'% self.filename,bb)        
+#         bb = np.zeros_like(img)
+#         bb= np.where(binar == 1,255,0)
+#         
+#         print 'results/objects_binary_%s'% self.filename
+#         cv2.imwrite('results/objects_binary_%s'% self.filename,bb)        
         
         lf = labeling.LabelFactory([])
         labelsMap = lf.getLabelsExternal(binar, 8, 0)
@@ -658,8 +659,8 @@ class ChessboardDetector(object):
         # znajdz główne obiekty na obrazie
         objectsLabelsMap = self.find_objects(scene.view)
         
-        size = 7
-        cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+        size = 13
+        cross = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(size,size))
         
         # zeby polaczyc tak na prawde te same wierzcholki
         # harris w tutorialach do cv3
@@ -680,13 +681,13 @@ class ChessboardDetector(object):
         ct = corners.T
         dst2[(ct[0],ct[1])] = 1
         
-        bb = np.zeros((gray.shape[0],gray.shape[1],3))
-        bb = scene.view.copy()
-        bb[chessboardMap>0] = (0,255,0)
-        bb[dst2>0] = (255,0,0)
-        
-        print 'results/Harris_%s' % self.filename
-        cv2.imwrite('results/Harris_%s' % self.filename, bb)
+#         bb = np.zeros((gray.shape[0],gray.shape[1],3))
+#         bb = scene.view.copy()
+#         bb[chessboardMap>0] = (0,255,0)
+#         bb[dst2>0] = (255,0,0)
+#         
+#         print 'results/Harris_%s' % self.filename
+#         cv2.imwrite('results/Harris_%s' % self.filename, bb)
         
         corners = self.getCentroidHarris(dst2)
         print 'corners', corners
@@ -722,7 +723,6 @@ class ChessboardDetector(object):
         gamma = gamma.astype('uint8')
         
         
-        cv2.imwrite('results/gray.jpg',gray)
         cv2.imwrite('results/gamma.jpg',gamma)
         gray = gamma
         ret, binary = cv2.threshold(gray,self.thresholdGetFields,1,cv2.THRESH_BINARY_INV)
@@ -749,13 +749,13 @@ class ChessboardDetector(object):
         
         shape = binary.shape
         
-        bb = self.origin.copy()
-        bb[binaryF == 1] = (0,0,0)
-        for c in corners2Shifted:
-            cv2.circle(bb,(c[1],c[0]),5,(255,0,0),-1)
-            
-        print 'results/mask_%s'% (self.filename)
-        cv2.imwrite('results/mask_%s'% (self.filename) ,bb)
+#         bb = self.origin.copy()
+#         bb[binaryF == 1] = (0,0,0)
+#         for c in corners2Shifted:
+#             cv2.circle(bb,(c[1],c[0]),5,(255,0,0),-1)
+#             
+#         print 'results/mask_%s'% (self.filename)
+#         cv2.imwrite('results/mask_%s'% (self.filename) ,bb)
         
         print 'board:', board_w, board_h
         board_w = 10
@@ -768,30 +768,27 @@ class ChessboardDetector(object):
         edgeBinaryMap = cv2.dilate(edgeBinaryMap,cross)
         
         bb = self.origin.copy()
-        
+         
         bb[binary==1] = (50,50,200)
         bb[edgeBinaryMap==1] = (255,10,255)
         for p in corners2Shifted:
             cv2.circle(bb,(p[1],p[0]),1,(255,0,0),-1 )
             pass
-        
+         
+        chessCorners, leftMask = self.getChessCorners(binary,edgeBinaryMap,corners2Shifted)
+
         print 'results/processed_%s' % (self.filename)
         cv2.imwrite('results/processed_%s' % (self.filename),bb)
-        
-        chessCorners, leftMask = self.getChessCorners(binary,edgeBinaryMap,corners2Shifted)
 
         print 'points:',len(chessCorners)
         print 'should be', board_w*board_h*2  
         
-        
-        bb = self.origin.copy()
-        
-        
-        cornersLeft,cornersRight,maskLeft,maskRight = self.splitCorners(chessCorners,leftMask) 
-        bb[leftMask == 1] = (255,255,0)
-        for coords in cornersRight:
-            cv2.circle(bb,(coords[1],coords[0]),3,(0,255,0),3)
-        cv2.imwrite('results/mask_%s' % (self.filename),bb)   
+        cornersLeft,cornersRight,maskLeft,maskRight = self.splitCorners(chessCorners,leftMask)
+#         bb = self.origin.copy() 
+#         bb[leftMask == 1] = (255,255,0)
+#         for coords in cornersRight:
+#             cv2.circle(bb,(coords[1],coords[0]),3,(0,255,0),3)
+#         cv2.imwrite('results/mask_%s' % (self.filename),bb)   
                 
 #         self.getDirections(leftMask,board_h)    
         
