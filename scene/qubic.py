@@ -34,6 +34,7 @@ class QubicObject(object):
         self.edgeMask = edgeMask
         
         walls, labelsMap, backgroundLabel, labels = self.findWalls(edgeMask)
+        
         self.labelsMap = labelsMap
         self.labels = labels
         self.backgroundLabel = backgroundLabel
@@ -96,7 +97,7 @@ class QubicObject(object):
         '''
             zwraca krawdedzie wykryte kolorowym operatorem Sobela
         '''
-#         gauss_kernel = 5
+#         gauss_kernel = 1
 #         img = cv2.GaussianBlur(self.image, (gauss_kernel, gauss_kernel), 0)
         ed = edgeDetector.edgeDetector(self.image)
         edgeMask = ed.getSobel()
@@ -159,11 +160,14 @@ class QubicObject(object):
         res = lf.getLabelsExternal(edgeMask, neighbors=8, background=1)
         
         #znalezienie tla
-        labelsMap,labels,backgroundLabel = lf.getBackgroundLabel(res)
+        labelsMap,labels,backgroundLabel = lf.getBackgroundLabel(res,500,True)
         
         ei = self.emptyImage.copy()
         ei[labelsMap == backgroundLabel] = (255,255,255)
         
+#         print 'results/shadowss.jpg'
+#         cv2.imwrite('results/shadowss.jpg',ei)
+#         
         #operacja otwarcia na tle - eliminacja dorbnych zaklucen
         labelsMap = self.openOperation(labelsMap, backgroundLabel, kernelSize=5)
         
@@ -187,6 +191,8 @@ class QubicObject(object):
             walls[label] = w
         
         self.edgeMask = np.where(labelsMap == -1,1,0).astype('uint8')
+        
+        print 'number of walls', len(walls)
         
         return walls, labelsMap, backgroundLabel, labels
 
@@ -214,7 +220,9 @@ class QubicObject(object):
         Bmap - empty map
         '''
         
-        for kk,wall in walls.iteritems():
+        for kk,wall in walls.iteritems() :
+            if wall.shadow :
+                continue
             #szukanie konturow nalezacych do scian
             for edge_label in edgeLabels:
                 
@@ -248,3 +256,38 @@ class QubicObject(object):
                     wall.conterpoint = wall.vertexes[(idx+3)%6]
                     print 'drugi punkt', wall.conterpoint
         return walls    
+    
+    def getTopWall(self):
+        if self.vertexes is not None:
+            Min=  6000
+            topPoint = None
+            topWall = None
+            #szukaj punktu o najmniejszym y
+            for k,w in self.walls.iteritems():
+                vertexes = w.vertexes
+                for p in vertexes:
+                    m = p[1]
+                    if m<Min:
+                        Min = m
+                        topPoint = p
+                        topWall = w
+            
+            treshold = 10
+            vertexes = topWall.vertexes
+            for v1 in vertexes:
+                for v2 in topWall.vertexes:
+                    if v1 == v2:
+                        break 
+                    dist = an.calcLength(v1, v2)
+                    
+                    if dist < treshold:
+                        print 'pair', v1,v2
+                        v3 = ( int ((v1[0]+v2[0])*0.5) , int ((v1[1]+v2[1])*0.5) )
+                        i1 = vertexes.index(v1)
+                        i2 = vertexes.index(v2)
+                        vertexes[i1] = v3
+                        del vertexes[i2]
+                        topWall.vertexes = vertexes
+            print 'topWallPoints', topWall.vertexes
+            return topWall.vertexes
+            
