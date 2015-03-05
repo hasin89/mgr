@@ -142,10 +142,6 @@ class objectDetector2(object):
         
         zoneA, zoneC = self.detect2(md)
             
-#         margin = 20
-#         zoneA = self.setMargin(zoneA, margin)
-#         zoneC = self.setMargin(zoneC, margin)
-        
         print 'results/zoneA.jpg'
         cv2.imwrite('results/zoneA.jpg',np.where(zoneA.image == 1,255,0))
         cv2.imwrite('results/zoneC.jpg',np.where(zoneC.image == 1,255,0))
@@ -220,8 +216,6 @@ class objectDetector2(object):
         
         cv2.imwrite('results/labeling.jpg',np.where(binary==1,255,0))  
                  
-                 
-        
         lf = LabelFactory([])   
         
         labelsMap = lf.getLabelsExternal(binary, 8, 0)
@@ -253,117 +247,6 @@ class objectDetector2(object):
         Map[max(yy),:] = 1
         Map[Y,:] = 1
         cv2.imwrite('results/labeling1_%d_.jpg'%l,Map)
-        
-#         labels =  np.unique(labelsMap)
-#         for label in labels:
-#             if label == -1:
-#                 continue
-#             objects = np.where(labelsMap == label,1,0)
-#             indices = np.nonzero(objects)
-#             print indices
-#             points =  np.array([ indices[0],indices[1] ]).T 
-#             print points
-#             y,x,h,w = cv2.boundingRect(objects)
-#             print y,x,h,w
-        
-#         cd = ContourDetector(origin)
-#         objects,margin = cd.findObjects(contours)
-#         
-#         center = []
-#         area = []
-#         rects = []
-#         small = []
-#         circles = []
-#         rectangles = []
-#         
-#         for j,BND in enumerate(objects):
-#             x,y,w,h = cv2.boundingRect(BND)
-#             
-#             #filtracja obiektow po prawej i lewej krawedzi oraz z dolu
-#             if x == 1 or x+w+1 == origin.shape[1] or y+h+1 == origin.shape[0]:
-#                 
-#                 center.append(None)
-#                 area.append(None)
-#                 rects.append(None)
-#                 rectangles.append(None)
-#                 
-#                 continue
-#             
-# #             if y == 1 and letter in ['C','D']:
-# #                 continue
-#             center_i = (h/2,w/2)
-#             area_i = h*w
-#             
-#             center.append(center_i)
-#             area.append(area_i)
-#             rects.append((x,y,w,h))
-#             
-#             if abs(h-w) < max(h,w)*0.1:
-#                 #przypadek kwadratu
-#                 
-#                 
-#                 if abs ( margin*2 - w ) < w*0.1:
-# #                     print 'small square: ',(x,y, h, w)
-#                     small.append(j)
-#                     test1 = np.zeros_like(origin)
-#                     cv2.circle(test1,(int(x+w/2),int(y+h/2)),int(margin*2.5),200,1)
-#                     cv2.circle(origin,(int(x+w/2),int(y+h/2)),int(margin*2.5),200,1)
-#                     c1 = np.nonzero(test1)
-#                     c11 = np.transpose(c1)
-#                     circles.append(map(tuple,c11))
-#                     
-#                     
-#                 #cv2.circle(origin,(int(x+w/2),int(y+h/2)),margin*2.5,200,2)
-#             test2 = np.zeros_like(origin)
-#             cv2.rectangle(test2,(x,y),(x+w,y+h),(255),1)
-#             cv2.rectangle(origin,(x,y),(x+w,y+h),(255),1)
-#             c2 = np.nonzero(test2)
-#             c22 = np.transpose(c2)
-#             rectangles.append(map(tuple,c22))
-#             
-# #       mark object DEBUG
-# #         for i in range(0,len(BND)-1):
-# #             cv2.line(origin,(BND[i][0][0],BND[i][0][1]) ,(BND[i+1][0][0],BND[i+1][0][1]),255,1)
-#                     
-#         iMax = area.index(max(area))
-#         print iMax
-#         common = []
-#         if len(circles) > 0:
-#             for c in circles:
-# #                 print 'common points'
-#                 common_points = set(rectangles[iMax]).intersection(c)
-#                 if len(common_points)>0:
-# #                     print 'YES'
-#                     common.append(c)
-#                 else:
-#                     pass
-# #                     print 'NO'
-#         points = rectangles[iMax]            
-#         for c in common:
-#             points = points + c
-#         
-#         BND2 = np.asarray([[(y,x) for (x,y) in points]])
-#         x,y,w,h = cv2.boundingRect(BND2)
-#         cv2.rectangle(origin,(x,y),(x+w,y+h),(255),3) 
-#         
-#         padding = int ( w*0.1 )
-#         
-#         Y = y-padding
-#         
-#         # ewentualne dodawanie oderwanych czesci duzych kwadratow
-#         maxi = rects[iMax]
-#         
-#         if len(area)>1:
-#             area[iMax] = None
-#             iMax2 = area.index(max(area))
-#             
-#             if area[iMax2] != None:
-#         
-#                 midi = rects[iMax2]
-#                 
-#                 if midi[0]>maxi[0] and midi[1]<maxi[1] and midi[2]<maxi[2]:
-#                     Y = midi[1]
-#                     h += midi[3] + abs(maxi[1] - midi[1]-midi[3] )
                     
         return (x ,Y,w,h)
    

@@ -1,7 +1,7 @@
 from unittest.test.test_result import __init__
 
 __author__ = 'tomek'
-
+raise
 import cv2
 import analise as an
 # import numpy as np

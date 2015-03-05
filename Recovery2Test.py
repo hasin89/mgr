@@ -7,7 +7,6 @@ Created on Sep 27, 2014
 import unittest
 import numpy as np
 from calculations import triangulation,DecompPMat
-from scene.edge import edgeMap
 import pickle
 import cv2
 import func.markElements as mark

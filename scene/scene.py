@@ -6,7 +6,6 @@ Created on Sep 3, 2014
 '''
 import func.trackFeatures as features
 import cv2
-from edge import edgeMap
 import numpy as np
 
 
@@ -35,38 +34,6 @@ class Scene(object):
         self.getGrayScaleImage()
         
         
-        
-        
-    def getEdges(self):
-        
-        #edge_filtred, vis = features.canny(self.view, self.gauss_kernel, self.gamma)
-        edge_filtred, vis = features.adaptiveThreshold(self.view, self.gauss_kernel, self.gamma,self.constant,self.blockSize)
-        self.edge_map = edgeMap(self.view, edge_filtred)
-        
-        return self.edge_map
-    
-    def getEdges2(self,gauss_kernel=5,constant=5,blockSize=101,treshold=4):
-        
-#         gauss_kernel = 5
-#         constant = 5
-#         blockSize = 101
-#         tresh = 4
-        
-        gray = self.gray
-        gray_filtred = cv2.GaussianBlur(gray, (gauss_kernel, gauss_kernel), 0)
-        
-        
-        edge_filtred = cv2.adaptiveThreshold(gray_filtred,
-                                             maxValue=255,
-                                             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                             thresholdType=cv2.THRESH_BINARY_INV,
-                                             blockSize=blockSize,
-                                             C=constant)
-        
-        dst = cv2.distanceTransform(edge_filtred,cv2.cv.CV_DIST_C,3)
-        mask = np.where(dst>treshold,255,0).astype('uint8')
-        self.edge_map = edgeMap(self.view, mask)
-        return self.edge_map
     
     def getGrayScaleImage(self):
         self.gray = cv2.cvtColor(self.view, cv2.COLOR_BGR2GRAY)

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from math import sqrt
-from func import objects as obj
 
 __author__ = 'tomek'
 
