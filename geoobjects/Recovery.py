@@ -4,22 +4,16 @@ Created on Sep 27, 2014
 
 @author: Tomasz
 '''
-import unittest
+import operator
+import itertools
 import numpy as np
-from scene.edge import edgeMap
-import pickle
 import cv2
-import func.markElements as mark
-from scene.mirrorDetector import mirrorDetector
-from scene.zone import Zone
+import func.analise as an
 from scene.scene import Scene
-from scene import edgeDetector
-from scene.qubic import QubicObject
-import sys,os
 from numpy import linalg
+import gc
 
 from drawings.Draw import getColors
-from numpy.linalg.linalg import inv
 
 class thirdDianensionREcovery():
 
