@@ -8,16 +8,15 @@ Created on Feb 26, 2015
 import sys, os
 import cv2
 import time
+import gc
  
 import numpy as np
 import func.markElements as mark
 from scene.scene import Scene
-from scene.zone import Zone
 from scene.qubic import QubicObject
 
 from scene.mirrorDetector import mirrorDetector
 from scene.objectDetector2 import objectDetector2
-from scene.edgeDetector import edgeDetector
 
 from geoobjects import Recovery
 
@@ -37,7 +36,7 @@ cornersVerificationCircleDiameter = [9, 31]  # -> usually less than 25% of chess
 board_w = 10
 board_h = 7
 
-thresholdGetFields = 140
+thresholdGetFields = [120,120,120,120,120]
 
 
 def loadImage(filename, factor=1):
@@ -138,7 +137,6 @@ def showDifference(filenames,imagePoints2,imagePointsR):
 
 def swap(A):
     A = np.array(A)
-    
     
     A = A.T
     B = np.array([ A[1],A[0] ])
@@ -279,7 +277,7 @@ def calibrate():
         scene = loadImage(filename)
         
         shape = (scene.view.shape[0],scene.view.shape[1])
-        outputImages.append(scene.view)
+#         outputImages.append(scene.view)
         filenames.append(filename)
 
         cd = ChessboardDetector(chessboardDetectionTreshold[i], (board_w, board_h), cornersVerificationCircleDiameter[i])
@@ -289,7 +287,7 @@ def calibrate():
         cd.filename = parts[-1]
         print 'FILE:',cd.filename 
         
-        cd.thresholdGetFields = thresholdGetFields
+        cd.thresholdGetFields = thresholdGetFields[index]
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -304,12 +302,14 @@ def calibrate():
         imag.append(finalP)
         real.append(finalWP)  
         offsets.append(offset)
+        gc.collect()
     
     chessPoints = []
     for im in imag:
         p = rearange(im)
         chessPoints.append(p)
-
+        gc.collect()
+    print 'real'
     real = rearange(real[0])
     
     trueOffsets = []
@@ -320,10 +320,10 @@ def calibrate():
     calibrationTool = Recovery.thirdDianensionREcovery()
     imagePoints2, mtx, dist, rvecs, tvecs, left_real, images = calibrationTool.calibrateMulti(filenames, shape, chessPoints, real, trueOffsets)
     
-    for rvec,tvec,imgPoints, img1,filename in zip(rvecs,tvecs,imagePoints2,outputImages,filenames):
-        f = 'results/calibration/calibrated_image_%s' % filename
-        print 'results/calibration/calibrated_image_%s' % filename
-        cv2.imwrite(f, img1)
+#     for rvec,tvec,imgPoints, img1,filename in zip(rvecs,tvecs,imagePoints2,outputImages,filenames):
+#         f = 'results/calibration/calibrated_image_%s' % filename
+#         print 'results/calibration/calibrated_image_%s' % filename
+#         cv2.imwrite(f, img1)
         
     print mtx
     print dist
@@ -371,7 +371,7 @@ def poseEstimation():
         cd.image_type = i
         cd.filename = parts[-1]
         print 'FILE:',cd.filename 
-        cd.thresholdGetFields = 160
+        cd.thresholdGetFields = 130
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -428,6 +428,8 @@ def poseEstimation():
     calibration.saveParameter(np.array(filenames), 'filenames')
     
     calibration.saveParameter(np.array(trueOffsets), 'TrueOffset')
+    
+    calibration.saveParameter(np.array(imagePoints2),'imagePoints2')
 
         
 def localize():
@@ -466,8 +468,21 @@ def localize():
     print 'zapisywanie do ' + f
     cv2.imwrite(f, mirrorZone.preview)
     
-    od = objectDetector2(md, md.origin,offsets)
-    zoneA, zoneC = od.detect(chessboard=True, multi=True)
+    gray = scene.gray
+    dst = cv2.cornerHarris(gray,blockSize=5,ksize=3,k=0.04)
+    ret, dst = cv2.threshold(dst,0.01*dst.max(),1,cv2.THRESH_BINARY)
+    indieces =  np.nonzero(dst)
+    corners = np.array([indieces[0],indieces[1]]).T
+    dst2 = np.zeros_like(gray)
+    ct = corners.T
+    dst2[(ct[0],ct[1])] = 1
+    bb = np.zeros((gray.shape[0],gray.shape[1],3))
+    bb = scene.view.copy()
+    bb[dst2>0] = (255,0,0)
+    cv2.imwrite('results/Harris_preview.jpg' , bb)
+    
+    od = objectDetector2(md, md.origin)
+    zoneA, zoneC = od.detect(chessboard=False, multi=False)
     
     f = writepath + 'objectA.jpg'
     print 'zapisywanie do' + f
@@ -481,23 +496,28 @@ def localize():
     
     qubicA = QubicObject(zoneA.image)
     
+    
+    cv2.imwrite('results/sobelA.jpg',np.where(qubicA.edgeMask>0,255,0)) 
+    
     imgQ = mark.drawQubic(qubicA)
     cv2.imwrite('results/object_structure_A.jpg',imgQ)
     
     qubicC = QubicObject(zoneC.image)
+    
+    cv2.imwrite('results/sobelC.jpg',np.where(qubicC.edgeMask>0,255,0)) 
     mark.drawQubic(qubicC)
     imgQ = mark.drawQubic(qubicC)
-    cv2.imwrite('results/object_structureC.jpg',imgQ) 
+    cv2.imwrite('results/object_structure_C.jpg',imgQ) 
     
     objectsOffsets = [[],[]]
      
-    modelPoints[0] = qubicA.vertexes
+    modelPoints[0] = qubicA.getTopWall()
     objectsOffsets[0] = (zoneA.offsetX, zoneA.offsetY)
     
-    modelPoints[1] = qubicC.vertexes
+    modelPoints[1] = qubicC.getTopWall()
     objectsOffsets[1] = (zoneC.offsetX, zoneC.offsetY)
     
-    print objectsOffsets
+#     print objectsOffsets
     
     modelPoints2 = []
     for points,offset in zip(modelPoints,objectsOffsets):
@@ -506,7 +526,8 @@ def localize():
     
     #rysowanie puntow
     d = 0
-    for img,model in zip(images,modelPoints2):
+    for i,model in zip(images,modelPoints2):
+        img = scene.view.copy() 
         for p in model:
             cv2.circle(img, (p[0],p[1]), 5, (0,0,0), -1) 
         cv2.imwrite('results/marked%d.jpg'%d,img)
@@ -521,25 +542,44 @@ def localize():
     oPoints1 = swap(oPoints1)
     oPoints2 = swap(oPoints2)
     
-    lines1, lines2 = calibrationTool.calculateEpilines(oPoints1, oPoints2, fundamental, images[0], images[1])
+    lines1, lines2 = calibrationTool.calculateEpilines(oPoints1, oPoints2, fundamental, scene.view.copy(), scene.view.copy())
     
-    oPoints1, oPoints2 = calibrationTool.matchPoints(oPoints1,oPoints2,lines1,lines2)
+    oPoints1, oPoints2 = calibrationTool.matchPoints(oPoints1,oPoints2,lines1,lines2,scene.view.copy(), scene.view.copy())
     
     #triangulacja
     imagePoints3 = np.append(imagePoints2[0], oPoints1, 0)
     imagePoints4 = np.append(imagePoints2[1], oPoints2, 0)
     
+#     print imagePoints2[0]
+#     print imagePoints2[1]
+    
     n = imagePoints3.shape[0]
     m = oPoints1.shape[0]
-            
-#     rrr2 = cv2.triangulatePoints(P1,P2,imagePoints3.T , imagePoints4.T)
-#     vfunc = np.vectorize(round)
-#     points = cv2.convertPointsFromHomogeneous(rrr2.T)
-#     
-#     np.set_printoptions(precision=6,suppress=True)
-#     
-#     points2 = vfunc(points,4)
-#     print 'recovered2:\n', points2.reshape(n,3)[-m:]
+    
+#     imagePoints3 = imagePoints3.reshape(1,144,2)
+#     imagePoints4 = imagePoints4.reshape(1,144,2)
+    
+#     print imagePoints3.T
+    
+    np.set_printoptions(precision=6,suppress=True)
+    
+    rrr2 = cv2.triangulatePoints(P1,P2,imagePoints3.T , imagePoints4.T)
+    rrr2 = rrr2.astype(np.float32)
+    
+    vfunc = np.vectorize(round)
+    
+    
+    rec =  rrr2/rrr2[3]
+    
+    points = cv2.convertPointsFromHomogeneous(rrr2.T)
+     
+    points2 = vfunc(points,4)
+    print 'recovered2:\n', points2.reshape(n,3)[-m:]
+    finalPoints = points2.reshape(n,3)[-m:]
+    print finalPoints[0]-finalPoints[1]
+    print finalPoints[1]-finalPoints[2]
+    print finalPoints[2]-finalPoints[3]
+    print finalPoints[3]-finalPoints[0]
     
     
 
