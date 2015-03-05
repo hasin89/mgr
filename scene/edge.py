@@ -9,7 +9,6 @@ import numpy as np
 from func import histogram
 from ContourDectecting import ContourDetector
 from ObjectDectecting import ObjectDetector
-from spottedObject import spottedObject
 from analyticGeometry import convertLineToGeneralForm
 
 

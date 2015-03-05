@@ -5,7 +5,6 @@ Created on Oct 31, 2014
 @author: Tomasz
 '''
 import numpy as np
-import cv2
 
 class Zone(object):
     

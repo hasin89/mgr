@@ -155,7 +155,8 @@ class Contour(object):
                         counter += 1
                         linesResult = np.append(linesResult, linesI[0][0])
                     elif linesI is None:
-                        print 'lines not found for number of points: ',len(self.points) 
+#                         print 'lines not found for number of points: ',len(self.points) 
+                        pass
                 linesR = np.reshape(linesResult,(counter,2))
                 if len(linesR)>1:
 #                     print 'lines',linesR

@@ -13,7 +13,6 @@ import cv2
 import numpy as np
 import analyticGeometry as an
 from skimage import morphology
-from skimage import measure
 
 class ContourDetector():
     

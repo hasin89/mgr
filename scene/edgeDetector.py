@@ -17,9 +17,9 @@ class edgeDetector(object):
         gauss_kernel = 5
         
 #         image = self.gammaCorection(image)
-        
-        self.image = image
         self.blur = cv2.GaussianBlur(image, (gauss_kernel, gauss_kernel), 0)
+        self.image = image
+        
         
     def gammaCorection(self,gray):
         gamma_correction = 1.55

@@ -5,7 +5,6 @@ import numpy as np
 import cv2
 import json
 import os
-from scene.zone import Zone
 
 '''
 Created on Jan 27, 2015

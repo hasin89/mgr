@@ -8,8 +8,6 @@ __author__ = 'tomek'
 import cv2
 import numpy as np
 import copy
-import func.objects as obj
-import timeit
 
 
 def getMostLeftAndRightCorner(corners,shape):

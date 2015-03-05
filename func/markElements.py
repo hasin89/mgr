@@ -145,7 +145,6 @@ def drawQubic(qubic):
         if len(qubic.vertexes) > 7:
 #             raise Exception('too much vertexes')
             pass
-        print 'wierzcholki: ', qubic.vertexes
         
 #         f = open(fname,'rb')
 #         obj = pickle.load(f)

@@ -7,7 +7,6 @@ Created on Jan 8, 2015
 import cv2
 import numpy as np
 import func.analise as an
-from func import objects as obj
 from math import cos
 import func.markElements as mark
 from calculations.labeling import LabelFactory
@@ -22,7 +21,6 @@ class Wall(object):
         '''
         Constructor
         '''
-        
         self.map = wallMap
         self.label = label
         

@@ -9,7 +9,6 @@ __author__ = 'tomek'
 '''
 
 from collections import Counter
-from math import sqrt
 from math import cos
 import cv2
 import numpy as np
