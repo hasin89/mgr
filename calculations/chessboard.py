@@ -66,11 +66,13 @@ class ChessboardDetector(object):
         b3 = cv2.erode(binary,cross)
         cross = np.array([
                           
-                          [1,1,1,1,1,1,1,1,1],
-                          [1,1,1,1,1,1,1,1,1],
-                          [1,1,1,1,1,1,1,1,1]
+                          [1,1,1,1,1,1,1,1,1,1],
+                          [1,1,1,1,1,1,1,1,1,1],
+                          [1,1,1,1,1,1,1,1,1,1],
+                          [1,1,1,1,1,1,1,1,1,1]
                           
                           ])
+        b3 = cv2.erode(b3,cross)
         b3 = cv2.erode(b3,cross)
         b3 = cv2.erode(b3,cross)
         
