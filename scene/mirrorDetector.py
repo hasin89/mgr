@@ -40,7 +40,7 @@ class mirrorDetector(object):
     part = 4
     
     DST = None
-    THETA = 60 * np.pi/ 180
+    THETA = 67 * np.pi/ 180
         
     def __init__(self,scene):
         
