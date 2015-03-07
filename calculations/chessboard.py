@@ -61,34 +61,40 @@ class ChessboardDetector(object):
         #wykrywanie zgiecia
         
         #erozja w celu rozdzielenia pól szachownicy
-        size = 7
-        cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
-        b3 = cv2.erode(binary,cross)
-        cross = np.array([
-                          
-                          [1,1,1,1,1,1,1,1,1,1],
-                          [1,1,1,1,1,1,1,1,1,1],
-                          [1,1,1,1,1,1,1,1,1,1],
-                          [1,1,1,1,1,1,1,1,1,1]
-                          
-                          ])
-        b3 = cv2.erode(b3,cross)
-        b3 = cv2.erode(b3,cross)
-        b3 = cv2.erode(b3,cross)
+                #         size = 7
+                #         cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+                #         b3 = cv2.erode(binary,cross)
+                #         b3 = cv2.erode(binary,cross)
+                #         b3 = cv2.erode(binary,cross)
+                #         cross = np.array([
+                #                           
+                #                           [1,1,1,1,1,1,1,1,1,1],
+                #                           [1,1,1,1,1,1,1,1,1,1],
+                #                           [1,1,1,1,1,1,1,1,1,1],
+                #                           [1,1,1,1,1,1,1,1,1,1],
+                #                           [1,1,1,1,1,1,1,1,1,1]
+                #                           
+                #                           ])
+                #         b3 = cv2.erode(b3,cross)
+                #         b3 = cv2.erode(b3,cross)
+                #         
+                #         cross = np.array([
+                #                           
+                #                           [1,1,1,1,1,1,1,1]
+                #                           
+                #                           ])
+                #         b3 = cv2.erode(b3,cross)
+        distanceTreshold = 20
         
-        cross = np.array([
-                          
-                          [1,1,1,1,1,1,1,1]
-                          
-                          ])
-        b3 = cv2.erode(b3,cross)
+        dst = cv2.distanceTransform(binary,3,3)
+        mask = np.where(dst>distanceTreshold,1,0).astype('uint8')
         
-        bb = np.zeros((b3.shape[0],b3.shape[1],3))
-        bb[b3 == 1] = (255,0,255)
-        cv2.imwrite('results/chessboardMap.jpg',bb)
+        bb = np.zeros((binary.shape[0],binary.shape[1],3))
+        bb[mask == 1] = (255,0,255)
+        cv2.imwrite('results/chessboardMap_%s'%self.filename,bb)
         
         #policzenie powierzchni etykiet
-        labelMap = measure.label(b3,8,0)
+        labelMap = measure.label(mask,8,0)
         properties = measure.regionprops(labelMap)
         
         areas = [prop['convex_area'] for prop in properties if prop['convex_area']>20]
@@ -124,15 +130,39 @@ class ChessboardDetector(object):
         areas.sort()
         areas.reverse()
         obsoleteFields = []
-        for i in range(connected-2):
+        for i in range(connected-4):
             obsoleteFields.append(areas[i])
         
         edgeBinaryMap = np.zeros(labelMap.shape)
         
+        centers = []
         for p in properties:
             area = p['convex_area']
             if area in obsoleteFields:
                 edgeBinaryMap[labelMap==p['label']]=1
+                centers.append(p['centroid'])
+                
+        #dolacz obszary na lini:
+        if len(centers) == 2:
+            line = measure.LineModel()
+            centers = np.array(centers)
+#             cv2.line(edgeBinaryMap, (centers[0][1],centers[0][0]), (centers[1][1],centers[1][0]),4,1)
+            line.estimate(centers)
+            print centers
+            x1 = centers[0][0]
+            print x1
+            y = line.predict_y(x1)
+            
+            edgeBinaryMap[x1,y] = 1
+            
+            x2 = centers[1][0]
+            print x2
+            
+            x = x1
+            while x < x2:
+                x = x+1 
+                y = line.predict_y(x)
+                edgeBinaryMap[x,y] = 1            
         
         return edgeBinaryMap
     
@@ -183,8 +213,11 @@ class ChessboardDetector(object):
                 counter +=1
             else:
                 cv2.circle(bb,(p[1],p[0]),4,(255,0,255),-1 )
+                if edgeBinaryMap[p[0],p[1]] == 1:
+                    edgePoints.append(p)
+                    cv2.circle(bb,(p[1],p[0]),4,(0,0,255),-1 )
                 pass
-                
+        print 'results/corner_types_%d_%s' % (self.image_index,self.filename)
         cv2.imwrite('results/corner_types_%d_%s' % (self.image_index,self.filename),bb)
         shape = binary.shape
         print 'edge points', len(edgePoints)
@@ -323,8 +356,8 @@ class ChessboardDetector(object):
         finalPointsL = np.zeros( (len(leftPoints) ,len(leftPoints[0]),3) )
         finalPointsR = np.zeros( (len(rightPoints),len(rightPoints[0]),3) )
         
-        leftIMG = cv2.imread('results/pointss_left%s' % self.filename)
-        rightIMG = cv2.imread('results/pointss_right%s' % self.filename)
+#         leftIMG = cv2.imread('results/pointss_left%s' % self.filename)
+#         rightIMG = cv2.imread('results/pointss_right%s' % self.filename)
         
         for row in range(len(leftPoints)):
             for col in range(len(leftPoints[row])):
@@ -349,8 +382,8 @@ class ChessboardDetector(object):
                 
                 finalPointsR[row,col] = p
                 
-        cv2.imwrite('results/pointss_left%s' % self.filename , leftIMG)
-        cv2.imwrite('results/pointss_right%s' % self.filename, rightIMG)
+#         cv2.imwrite('results/pointss_left%s' % self.filename , leftIMG)
+#         cv2.imwrite('results/pointss_right%s' % self.filename, rightIMG)
         
         finalPoints = np.append(finalPointsL,finalPointsR,0)
         final = np.append(leftPoints,rightPoints,0)
@@ -538,16 +571,16 @@ class ChessboardDetector(object):
         thrs = 180
         thrs = self.chesboardTreshold
         retval, binar = cv2.threshold(gray, thrs, 1, cv2.THRESH_BINARY)
-        size = 101
+        size = 171
         cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
         binar = cv2.dilate(binar,cross)
         binar = cv2.erode(binar,cross)
         
-#         bb = np.zeros_like(img)
-#         bb= np.where(binar == 1,255,0)
+        bb = np.zeros_like(img)
+        bb= np.where(binar == 1,255,0)
 #         
-#         print 'results/objects_binary_%s'% self.filename
-#         cv2.imwrite('results/objects_binary_%s'% self.filename,bb)        
+        print 'results/objects_binary_%s'% self.filename
+        cv2.imwrite('results/objects_binary_%s'% self.filename,bb)        
         
         lf = labeling.LabelFactory([])
         labelsMap = lf.getLabelsExternal(binar, 8, 0)
@@ -630,8 +663,10 @@ class ChessboardDetector(object):
         chessboardMap_weaker = np.zeros_like(chessboardMap)
         chessboardMap_weaker[y:y+h,x:x+w] = 1 
         print 'chessboard zone shape', x,y,w,h
-        
-        z = Zone(scene.view, x, y, w, h, mask=None)
+        img = scene.view.copy()
+        img[chessboardMap == 0] = (255,255,255)
+#         img = np.where(chessboardMap == 1, scene.gray , 255 )
+        z = Zone( img, x, y, w, h, mask=None)
         
         return z,chessboardMap_weaker
     
@@ -654,19 +689,23 @@ class ChessboardDetector(object):
         
         gray = scene.gray
         
-        dst = cv2.cornerHarris(gray,blockSize=5,ksize=3,k=0.04)
+        dst = cv2.cornerHarris(gray,blockSize=7,ksize=3,k=0.04)
         harrisdst = dst.copy()
         
         print 'znajdź obiekty główne na obrazie'
         # znajdz główne obiekty na obrazie
         objectsLabelsMap = self.find_objects(scene.view)
         
-        size = 13
+        size = 15
+        if self.image_type == 0:
+            size = 7
         cross = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(size,size))
         
         # zeby polaczyc tak na prawde te same wierzcholki
         # harris w tutorialach do cv3
         dst = cv2.dilate(dst,cross)
+        dst = cv2.dilate(dst,cross)
+        
         ret, dst = cv2.threshold(dst,0.025*dst.max(),1,cv2.THRESH_BINARY)
 #         ret, dst = cv2.threshold(dst,0.025*dst.max(),1,cv2.THRESH_TOZERO)  
 #         for index, value in np.ndenumerate(dst):
@@ -676,6 +715,7 @@ class ChessboardDetector(object):
         corners = np.array([indieces[0],indieces[1]]).T
         
         z, chessboardMap = self.getChessboardZone(scene, corners, objectsLabelsMap)
+        gc.collect()
         
         corners = self.filterCorners(corners, chessboardMap)
         dst2 = np.zeros_like(chessboardMap)
@@ -684,12 +724,12 @@ class ChessboardDetector(object):
         dst2[(ct[0],ct[1])] = 1
         
 #         bb = np.zeros((gray.shape[0],gray.shape[1],3))
-#         bb = scene.view.copy()
+        bb = scene.view
 #         bb[chessboardMap>0] = (0,255,0)
-#         bb[dst2>0] = (255,0,0)
+        bb[dst2>0] = (255,0,0)
 #         
-#         print 'results/Harris_%s' % self.filename
-#         cv2.imwrite('results/Harris_%s' % self.filename, bb)
+        print 'results/Harris_%s' % self.filename
+        cv2.imwrite('results/Harris_%s' % self.filename, bb)
         
         corners = self.getCentroidHarris(dst2)
         print 'corners', corners
@@ -719,6 +759,7 @@ class ChessboardDetector(object):
         board_h = self.board_h
         
         gamma_correction = 1.55
+        gamma_correction = 2
         img_tmp = gray / 255.0
         cv2.pow(img_tmp, gamma_correction, img_tmp)
         gamma = img_tmp * 255.0
@@ -766,6 +807,7 @@ class ChessboardDetector(object):
         
         size = 21
         cross = cv2.getStructuringElement(cv2.MORPH_RECT,(size,size))
+        edgeBinaryMap = cv2.dilate(edgeBinaryMap,cross)
         edgeBinaryMap = cv2.dilate(edgeBinaryMap,cross)
         edgeBinaryMap = cv2.dilate(edgeBinaryMap,cross)
         
@@ -954,4 +996,5 @@ class ChessboardDetector(object):
             cv2.circle(img2,(int(coords[1]),int(coords[0])),3,(255,0,0),1)
             
         
+    
     

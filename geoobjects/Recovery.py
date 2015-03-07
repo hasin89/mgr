@@ -322,7 +322,7 @@ class thirdDianensionREcovery():
             objectPoints2 = np.array(objectPoints,'float32')
             imagePoints2 = np.array(imagePoints,'float32')
                 
-            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx0,dist0,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx0,dist0,flags=cv2.CALIB_USE_INTRINSIC_GUESS|cv2.CALIB_FIX_PRINCIPAL_POINT|cv2.CALIB_FIX_ASPECT_RATIO)
             
         else:
             ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
@@ -340,7 +340,7 @@ class thirdDianensionREcovery():
         
         images = []
         for scene in scenes:
-            images.append( scene.view.copy() )
+            images.append( scene.view)
         
         for k, img in enumerate(images):
             self.makeWow(images[k], mtx, dist, rvecs[k], tvecs[k],imagePoints2[k][0])
@@ -348,54 +348,54 @@ class thirdDianensionREcovery():
         return imagePoints2, mtx, dist, rvecs, tvecs, real, images
     
     
-    def calibrateStereo(self,filenames,shape,up,down,up_real,down_real,offsetUp,offsetDown):
-        chess_factor = 20
-        factor = 1
-        scene1 = self.loadImage(filenames[0], factor)
-        scene2 = self.loadImage(filenames[1], factor)
-
-        offset1 = offsetUp
-        left = up
-        left = offset1 + np.array(left)
-
-        left_real = up_real
-        left_real = np.multiply(left_real,chess_factor)
-        
-        offset2 = offsetDown
-        right = down
-        right = offset2 + np.array(right)
-
-        right_real = down_real
-        right_real = np.multiply(right_real,chess_factor)
-        
-        objectPoints = [np.array(left_real).reshape((140,3))[:70] , np.array(right_real).reshape((140,3))[:70]]
-        objectPoints2 = np.array(objectPoints,'float32')
-        
-        imagePoints = [left.reshape((140,2))[:70], right.reshape((140,2))[:70]]
-        imagePoints2 = np.array(imagePoints,'float32')
-        
-        ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
-        
-        objectPoints = [np.array(left_real).reshape((140,3)) , np.array(right_real).reshape((140,3))]
-        objectPoints2 = np.array(objectPoints,'float32')
-        
-        imagePoints = [np.array(left).reshape((140,2))[:140],np.array(right).reshape((140,2))[:140]]
-        imagePoints2 = np.array(imagePoints,'float32')
-        
-#         print objectPoints2
-#         print imagePoints2
-        
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
-        
-        img1 = scene1.view.copy()
-        img2 = scene2.view.copy()
-        
-        self.makeWow(img1, mtx, dist, rvecs[0], tvecs[0],imagePoints2[0][0])
-        self.makeWow(img2, mtx, dist, rvecs[1], tvecs[1],imagePoints2[1][0])
-        
-        images = [img1,img2]
-        
-        return imagePoints2, mtx, dist, rvecs, tvecs, left_real, images
+#     def calibrateStereo(self,filenames,shape,up,down,up_real,down_real,offsetUp,offsetDown):
+#         chess_factor = 20
+#         factor = 1
+#         scene1 = self.loadImage(filenames[0], factor)
+#         scene2 = self.loadImage(filenames[1], factor)
+# 
+#         offset1 = offsetUp
+#         left = up
+#         left = offset1 + np.array(left)
+# 
+#         left_real = up_real
+#         left_real = np.multiply(left_real,chess_factor)
+#         
+#         offset2 = offsetDown
+#         right = down
+#         right = offset2 + np.array(right)
+# 
+#         right_real = down_real
+#         right_real = np.multiply(right_real,chess_factor)
+#         
+#         objectPoints = [np.array(left_real).reshape((140,3))[:70] , np.array(right_real).reshape((140,3))[:70]]
+#         objectPoints2 = np.array(objectPoints,'float32')
+#         
+#         imagePoints = [left.reshape((140,2))[:70], right.reshape((140,2))[:70]]
+#         imagePoints2 = np.array(imagePoints,'float32')
+#         
+#         ret, mtx_init, dist_init, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape)
+#         
+#         objectPoints = [np.array(left_real).reshape((140,3)) , np.array(right_real).reshape((140,3))]
+#         objectPoints2 = np.array(objectPoints,'float32')
+#         
+#         imagePoints = [np.array(left).reshape((140,2))[:140],np.array(right).reshape((140,2))[:140]]
+#         imagePoints2 = np.array(imagePoints,'float32')
+#         
+# #         print objectPoints2
+# #         print imagePoints2
+#         
+#         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints2,imagePoints2,shape,mtx_init,dist_init,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+#         
+#         img1 = scene1.view.copy()
+#         img2 = scene2.view.copy()
+#         
+#         self.makeWow(img1, mtx, dist, rvecs[0], tvecs[0],imagePoints2[0][0])
+#         self.makeWow(img2, mtx, dist, rvecs[1], tvecs[1],imagePoints2[1][0])
+#         
+#         images = [img1,img2]
+#         
+#         return imagePoints2, mtx, dist, rvecs, tvecs, left_real, images
         
         
     def getFundamental(self, imagePoints2, rvecs,tvecs,mtx,dist, real, images, modelPoints=None):
@@ -454,7 +454,7 @@ class thirdDianensionREcovery():
         length2 = max(points.shape)
         
         points2 = vfunc(points,4)
-        print 'recovered:\n', points2.reshape(length2,3)[-4:]
+#         print 'recovered:\n', points2.reshape(length2,3)[-4:]
         points2 = vfunc(points)
 #         print 'real:\n', left_real.reshape(140,3)
         

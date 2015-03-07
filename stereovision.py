@@ -36,7 +36,14 @@ cornersVerificationCircleDiameter = [9, 31]  # -> usually less than 25% of chess
 board_w = 10
 board_h = 7
 
-thresholdGetFields = [120,120,120,120,120]
+thresholdGetFields = "100|105|140|150"
+thresholdGetFields = "130|140|140|110"
+thresholdGetFields = "160|150|135|140"
+thresholdGetFields = "140|140|140|140"
+filnams = "research/DSC_0141.JPG|research/DSC_0142.JPG|research/DSC_0144.JPG|research/DSC_0145.JPG"
+filnams = "|research/DSC_0172.JPG|research/DSC_0175.JPG|research/DSC_0176.JPG|research/DSC_0177.JPG"
+filnams = "research/DSC_0147.JPG|research/DSC_0148.JPG|research/DSC_0171.JPG|research/DSC_0180.JPG"
+filnams = "research/DSC_0179.JPG|research/DSC_0181.JPG|research/DSC_0182.JPG|research/DSC_0183.JPG"
 
 
 def loadImage(filename, factor=1):
@@ -228,6 +235,10 @@ def calibrate():
     names1 = sys.argv[2]
     names2 = sys.argv[3]
     names3 = sys.argv[4]
+    thr = sys.argv[5]
+    
+    thresholdGetFields = thr.split("|")
+    
     if names1 == 'None':
         mirrored = []
     else:
@@ -287,7 +298,7 @@ def calibrate():
         cd.filename = parts[-1]
         print 'FILE:',cd.filename 
         
-        cd.thresholdGetFields = thresholdGetFields[index]
+        cd.thresholdGetFields = int(thresholdGetFields[index])
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -347,6 +358,8 @@ def poseEstimation():
     
     mtx,dist = calibration.loadIntrinsicCalibration()
     mtx0  = mtx
+    print 'initial camera matrix'
+    print mtx0
     dist0 = dist
     
     index = 0
@@ -371,7 +384,12 @@ def poseEstimation():
         cd.image_type = i
         cd.filename = parts[-1]
         print 'FILE:',cd.filename 
-        cd.thresholdGetFields = 130
+        if i == 0:
+            #mirror
+            
+            cd.thresholdGetFields = 140
+        else:
+            cd.thresholdGetFields = 140
         
         finalP, finalWP, image, offset = calibration.getCalibrationPointsForScene(scene, cd)
         
@@ -422,6 +440,7 @@ def poseEstimation():
     print P1
     print P2
     print F
+    print mtx
     calibration.saveParameter(P1, 'P1')
     calibration.saveParameter(P2, 'P2')
     calibration.saveParameter(F, 'Fundamental')
@@ -482,6 +501,8 @@ def localize():
     cv2.imwrite('results/Harris_preview.jpg' , bb)
     
     od = objectDetector2(md, md.origin)
+    od.mirrorROI = [(1509,649),(2225,1041),(245,2133),(209,965)]
+    od.directROI = [(2645,1253),(3629,1753),(2833,3057),(9,2909)]
     zoneA, zoneC = od.detect(chessboard=False, multi=False)
     
     f = writepath + 'objectA.jpg'
@@ -574,12 +595,27 @@ def localize():
     points = cv2.convertPointsFromHomogeneous(rrr2.T)
      
     points2 = vfunc(points,4)
-    print 'recovered2:\n', points2.reshape(n,3)[-m:]
+#     print 'recovered2:\n', points2.reshape(n,3)[-m:]
+    
     finalPoints = points2.reshape(n,3)[-m:]
-    print finalPoints[0]-finalPoints[1]
-    print finalPoints[1]-finalPoints[2]
-    print finalPoints[2]-finalPoints[3]
-    print finalPoints[3]-finalPoints[0]
+    print 'recovered2:'
+    checksum = []
+    for i,p in enumerate(finalPoints):
+        s = abs(p[0])*2+abs(p[1])+abs(p[2])
+        
+        checksum.append(s)
+    ordered = []
+    for k in checksum:
+        idxMax = checksum.index( max(checksum) )
+        ordered.append(idxMax)
+        checksum[idxMax] = 0   
+    for k in ordered:
+        p = finalPoints[k]
+        print str(p[0]) + '\t' + str(p[1]) + '\t' + str(p[2])
+#     print finalPoints[0]-finalPoints[1]
+#     print finalPoints[1]-finalPoints[2]
+#     print finalPoints[2]-finalPoints[3]
+#     print finalPoints[3]-finalPoints[0]
     
     
 
@@ -608,6 +644,6 @@ if __name__ == '__main__':
         print massage
     
     end = time.time()
-    print 'elapsed:', end-start
+#     print 'elapsed:', end-start
 
 

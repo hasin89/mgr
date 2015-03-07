@@ -126,7 +126,7 @@ class Contour(object):
             rho = 1
             theta = np.pi/180
             tresh = self.map.shape[0]*0.05 #0.05
-            threshold = 20
+            threshold = 15
             
             if (self.wayPoint is not None):
                 points = self.points

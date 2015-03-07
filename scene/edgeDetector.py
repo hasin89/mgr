@@ -55,7 +55,7 @@ class edgeDetector(object):
         reg0 = cv2.flip(reg0_fl,-1)
         
         result = cv2.add(pro0,reg0)
-        result = np.where(result<25,0,result)
+        result = np.where(result<35,0,result)
         
         return result
     

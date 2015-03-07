@@ -15,6 +15,9 @@ from calculations.labeling import LabelFactory
 
 class objectDetector2(object):
     
+    mirrorROI = []
+    directROI = []
+    
     mirrorOfsets = None
         
     def __init__(self,md,image_origin,mirrorOffsets=None):
@@ -152,7 +155,7 @@ class objectDetector2(object):
         (x,y,w,h) = self.__findObject(zoneC.image,1)
         zoneC = Zone(self.origin,x+zoneC.offsetX,y+zoneC.offsetY,w,h)
         
-        margin = -20
+        margin = -30
         zoneA = self.setMargin(zoneA, margin)
         zoneC = self.setMargin(zoneC, margin)
         
@@ -168,7 +171,7 @@ class objectDetector2(object):
             p2 = (2353,1433)
             p3 = (197,2297)
             p4 = (165,1261)
-            triangle = np.array([ p1, p2, p3 ,  p4], np.int32)
+            triangle = np.array(self.mirrorROI, np.int32)
             cv2.fillConvexPoly(mask, triangle, 1)
             
         if image_type == 1:
@@ -177,7 +180,7 @@ class objectDetector2(object):
             p2 = (3589,2005)
             p3 = (2705,3053)
             p4 = (25,2713)
-            triangle = np.array([ p1, p2, p3 ,  p4], np.int32)
+            triangle = np.array(self.directROI, np.int32)
             cv2.fillConvexPoly(mask, triangle, 1)
         
         return mask

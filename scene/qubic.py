@@ -251,10 +251,10 @@ class QubicObject(object):
             
             if wall.convex[0] == True and wall.convex_point is not None:
                 print 'podzielny'
-                idx = wall.vertexes.index(wall.convex_point)
-                if len(wall.vertexes) == 6:
-                    wall.conterpoint = wall.vertexes[(idx+3)%6]
-                    print 'drugi punkt', wall.conterpoint
+#                 idx = wall.vertexes.index(wall.convex_point)
+#                 if len(wall.vertexes) == 6:
+#                     wall.conterpoint = wall.vertexes[(idx+3)%6]
+#                     print 'drugi punkt', wall.conterpoint
         return walls    
     
     def getTopWall(self):
