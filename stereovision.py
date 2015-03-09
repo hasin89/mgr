@@ -381,7 +381,7 @@ def poseEstimation():
         
         cd = ChessboardDetector(chessboardDetectionTreshold[i], (board_w, board_h), cornersVerificationCircleDiameter[i])
         cd.image_index = index
-        cd.image_type = i
+        cd.image_type = 0
         cd.filename = parts[-1]
         print 'FILE:',cd.filename 
         if i == 0:
